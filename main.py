@@ -5,7 +5,7 @@ import json
 import base64
 
 
-@register("sd_generator", "YourName", "Stable Diffusion图像生成", "1.0.0")
+@register("sd_generator", "buding", "Stable Diffusion图像生成", "0.0.1")
 class SDPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -54,7 +54,7 @@ class SDPlugin(Star):
         except aiohttp.ClientError as e:
             raise Exception(f"连接失败: {str(e)}")
 
-    @filter.command("sdgen")
+    @filter.command("sd")
     async def generate_image(self, event: AstrMessageEvent, *, prompt: str):
         """图像生成指令
 
