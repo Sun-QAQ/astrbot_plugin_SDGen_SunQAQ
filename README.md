@@ -1,8 +1,7 @@
-# helloworld
+# astrbot_plugin_SDGen
 
-AstrBot 用于图片生成的插件
-
-使用Stable Diffusion WebUI的API进行图片生成
+## 介绍
+用于图片生成的AstrBot插件，使用Stable Diffusion WebUI的API进行图片生成
 
 ## 用法
 ### 安装插件，对插件进行配置
