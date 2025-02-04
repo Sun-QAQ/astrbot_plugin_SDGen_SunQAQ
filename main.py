@@ -47,7 +47,7 @@ class SDGenerator(Star):
             }
         }
 
-    async def _generate_prompt(self, event: AstrMessageEvent, prompt: str) -> str:
+    async def _generate_prompt(self, prompt: str) -> str:
         provider = self.context.get_using_provider()
         if provider:
             prompt_generate_text = (
@@ -58,7 +58,7 @@ class SDGenerator(Star):
                 "描述："
             )
 
-            response = await provider.text_chat(f"{prompt_generate_text} {prompt}", session_id=event.session_id)
+            response = await provider.text_chat(f"{prompt_generate_text} {prompt}")
             if response.completion_text:
                 generated_prompt = response.completion_text.strip()
                 return generated_prompt
