@@ -9,6 +9,7 @@ class SDGenerator(Star):
         self.config = config
         self.session = None
         self._validate_config()
+        print(self.config)
 
     def _validate_config(self):
         """配置验证"""
