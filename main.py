@@ -68,8 +68,9 @@ class SDGenerator(Star):
     @command_group("sd")
     def sd(self):
         pass
+
     @sd.command("gen")
-    async def generate_image(self, event: AstrMessageEvent, *, prompt: str):
+    async def generate_image(self, event: AstrMessageEvent, prompt: str):
         """生成图像指令
         Args:
             prompt: 图像描述提示词
@@ -118,7 +119,7 @@ class SDGenerator(Star):
         except Exception as e:
             yield event.plain_result(f"❌ 连接测试失败: {str(e)}")
 
-    @sd. command("help")
+    @sd.command("help")
     async def show_help(self, event: AstrMessageEvent):
         """显示帮助信息"""
         help_msg = [
