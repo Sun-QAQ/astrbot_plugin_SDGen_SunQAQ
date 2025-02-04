@@ -2,7 +2,7 @@ from astrbot.api.all import *
 import aiohttp
 import json
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.0")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.1")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -98,7 +98,7 @@ class SDGenerator(Star):
 
         except Exception as e:
             error_msg = f"⚠️ 生成失败: {str(e)}"
-            if "ConnectionError" in str(e):
+            if "Cannot connect to host" in str(e):
                 error_msg += "\n请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
             yield event.plain_result(error_msg)
 
@@ -123,9 +123,9 @@ class SDGenerator(Star):
         help_msg = [
             "🖼️ Stable Diffusion 插件使用指南",
             "指令列表:",
-            "/sdgen [提示词] - 生成图像（示例：/sdgen 星空下的城堡）",
-            "/sdcheck - 检查服务连接状态",
-            "/sdhelp - 显示本帮助信息",
+            "/sd gen [提示词] - 生成图像（示例：/sdgen 星空下的城堡）",
+            "/sd check - 检查服务连接状态",
+            "/sd help - 显示本帮助信息",
             "配置参数:",
             f"当前模型: {self.config['default_params']['sampler']}",
             f"默认尺寸: {self.config['default_params']['width']}x{self.config['default_params']['height']}"
