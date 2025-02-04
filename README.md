@@ -1,8 +1,10 @@
 # helloworld
 
-AstrBot 插件模板
+AstrBot 用于图片生成的插件
 
-A template plugin for AstrBot plugin feature
+使用Stable Diffusion WebUI的API进行图片生成
+
+# 用法
 
 # 支持
 

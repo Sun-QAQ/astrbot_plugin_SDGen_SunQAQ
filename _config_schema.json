@@ -1,0 +1,38 @@
+{
+    "webui_url": {
+        "type": "string",
+        "description": "SD WebUI地址",
+        "default": "http://127.0.0.1:7860",
+        "hint": "需包含http/https协议头"
+    },
+    "negative_prompt": {
+        "type": "string",
+        "description": "固定负面提示词",
+        "default": "(worst quality, low quality:1.4), deformed, bad anatomy",
+        "hint": "自动附加到所有生成请求"
+    },
+    "default_width": {
+        "type": "int",
+        "description": "默认宽度",
+        "default": 512,
+        "options": [512, 768, 1024]
+    },
+    "default_height": {
+        "type": "int",
+        "description": "默认高度",
+        "default": 512,
+        "options": [512, 768, 1024]
+    },
+    "sampler": {
+        "type": "string",
+        "description": "采样方法",
+        "default": "DPM++ 2M Karras",
+        "options": ["Euler a", "DPM++ 2M Karras", "DDIM"]
+    },
+    "cfg_scale": {
+        "type": "int",
+        "description": "CFG Scale",
+        "default": 7,
+        "options": [5, 7, 10]
+    }
+}
