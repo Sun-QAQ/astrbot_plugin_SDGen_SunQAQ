@@ -52,7 +52,7 @@ pip install -r requirements.txt
 - 超分辨率插件 https://github.com/Coyote-A/ultimate-upscale-for-automatic1111
 - 提示词插件 https://github.com/Physton/sd-webui-prompt-all-in-one/tree/main
 
-6.以API方式启动webui
+6. 以API方式启动webui
 ```bash
 ./webui.sh --listen --port 7860 --api      # 带webui的方式启动
 #./webui.sh --listen --port 7860 --nowebui # 不带webui，仅API方式启动
