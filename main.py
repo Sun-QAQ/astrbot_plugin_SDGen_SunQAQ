@@ -1,10 +1,8 @@
-from astrbot.api.event import AstrMessageEvent
-from astrbot.api.event.filter import *
-from astrbot.api.star import *
+from astrbot.api.all import *
 import aiohttp
 import json
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "0.0.1")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.0")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
