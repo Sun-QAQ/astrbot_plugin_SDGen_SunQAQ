@@ -52,7 +52,7 @@ class SDGenerator(Star):
         if provider:
             prompt_generate_text = (
                 "请根据以下描述生成用于 Stable Diffusion WebUI 的提示词，"
-                "请返回一条逗号分隔的 `prompt` 字符串，适用于 SD-WebUI，"
+                "请返回一条逗号分隔的 `prompt` 英文字符串，适用于 SD-WebUI，"
                 "其中应包含主体、风格、光照、色彩等方面的描述，"
                 "避免解释性文本，直接返回 `prompt`，不要加任何额外说明。\n\n"
                 "描述："
