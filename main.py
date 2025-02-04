@@ -1,9 +1,6 @@
 import logging
-from typing import Any, Optional, Coroutine
-
-from astrbot.api.all import *
 import aiohttp
-import json
+from astrbot.api.all import *
 
 logger = logging.getLogger("astrbot")
 
@@ -50,10 +47,30 @@ class SDGenerator(Star):
             }
         }
 
+    async def _generate_prompt(self, event: AstrMessageEvent, prompt: str) -> str:
+        provider = self.context.get_using_provider()
+        if provider:
+            prompt_generate_text = (
+                "请根据以下描述生成用于 Stable Diffusion WebUI 的提示词，"
+                "请返回一条逗号分隔的 `prompt` 字符串，适用于 SD-WebUI，"
+                "其中应包含主体、风格、光照、色彩等方面的描述，"
+                "避免解释性文本，直接返回 `prompt`，不要加任何额外说明。\n\n"
+                "描述："
+            )
+
+            response = await provider.text_chat(f"{prompt_generate_text} {prompt}", session_id=event.session_id)
+            if response.completion_text:
+                generated_prompt = response.completion_text.strip()
+                logger.debug(f"LLM generated prompt: {generated_prompt}")
+                return generated_prompt
+
+        return ""
+
     async def _call_sd_api(self, prompt: str) -> dict:
         """调用SD API"""
         await self.ensure_session()
-        payload = await self._generate_payload(prompt)
+        generated_prompt = await self._generate_prompt(prompt)
+        payload = await self._generate_payload(generated_prompt)
 
         try:
             async with self.session.post(
@@ -74,13 +91,11 @@ class SDGenerator(Star):
         pass
 
     @sd.command("gen")
-    async def generate_image(self, event: AstrMessageEvent, prompt_start: str, *args):
+    async def generate_image(self, event: AstrMessageEvent, prompt):
         """生成图像指令
         Args:
             prompt: 图像描述提示词
         """
-        prompt = prompt_start.join(args)
-        logger.debug(f"prompt: {prompt}")
         try:
             # 第一阶段：生成开始反馈
             yield event.plain_result("🖌️ 正在生成图像，这可能需要1-2分钟...")
