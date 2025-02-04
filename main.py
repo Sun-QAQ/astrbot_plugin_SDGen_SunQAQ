@@ -89,16 +89,19 @@ class SDGenerator(Star):
             if not response.get("images"):
                 raise ValueError("API返回数据异常")
 
-            logger.debug(f"rep: {response}")
-
             image_data = response["images"][0]
             logger.debug(f"img: {image_data}")
 
             info = json.loads(response["info"])
             logger.debug(f"info: {info}")
 
+            image_bytes = base64.b64decode(image_data)
+
+            with open("output.jpg", "wb") as image_file:
+                image_file.write(image_bytes)
+
             # 发送结果
-            yield event.image_result(f"base64://{image_data}")
+            yield event.image_result("output.jpg")
             yield event.plain_result(
                 f"✅ 生成成功\n"
                 f"尺寸: {info['width']}x{info['height']}\n"
