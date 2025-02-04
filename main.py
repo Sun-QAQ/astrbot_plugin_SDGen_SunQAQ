@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Optional, Coroutine
 
 from astrbot.api.all import *
 import aiohttp
@@ -73,11 +74,13 @@ class SDGenerator(Star):
         pass
 
     @sd.command("gen")
-    async def generate_image(self, event: AstrMessageEvent, prompt: str):
+    async def generate_image(self, event: AstrMessageEvent, prompt_start: str, *args):
         """生成图像指令
         Args:
             prompt: 图像描述提示词
         """
+        prompt = prompt_start.join(args)
+        logger.debug(f"prompt: {prompt}")
         try:
             # 第一阶段：生成开始反馈
             yield event.plain_result("🖌️ 正在生成图像，这可能需要1-2分钟...")
@@ -144,4 +147,3 @@ class SDGenerator(Star):
             f"默认尺寸: {self.config['default_params']['width']}x{self.config['default_params']['height']}"
         ]
         yield event.plain_result("\n".join(help_msg))
-
