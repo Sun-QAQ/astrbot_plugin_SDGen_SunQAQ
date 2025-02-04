@@ -91,7 +91,7 @@ class SDGenerator(Star):
         pass
 
     @sd.command("gen")
-    async def generate_image(self, event: AstrMessageEvent, prompt):
+    async def generate_image(self, event: AstrMessageEvent, prompt: str):
         """生成图像指令
         Args:
             prompt: 图像描述提示词
