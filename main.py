@@ -58,7 +58,7 @@ class SDGenerator(Star):
                 "描述："
             )
 
-            response = await provider.text_chat(f"{prompt_generate_text} {prompt}")
+            response = await provider.text_chat(f"{prompt_generate_text} {prompt}", session_id=None)
             if response.completion_text:
                 generated_prompt = response.completion_text.strip()
                 return generated_prompt
