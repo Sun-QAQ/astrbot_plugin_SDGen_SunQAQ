@@ -1,93 +1,135 @@
-from astrbot.api.all import *
-from astrbot.api.message_components import Image
+from astrbot.api.event import AstrMessageEvent
+from astrbot.api.event.filter import *
+from astrbot.api.star import *
 import aiohttp
 import json
-import base64
 
-
-@register("sd_generator", "buding", "Stable Diffusion图像生成", "0.0.1")
-class SDPlugin(Star):
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "0.0.1")
+class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config
-        self.session = None  # 延迟初始化
+        self.session = None
+        self._validate_config()
+
+    def _validate_config(self):
+        """配置验证"""
+        if not self.config["webui_url"].startswith(("http://", "https://")):
+            raise ValueError("WebUI地址必须以http://或https://开头")
 
     async def ensure_session(self):
-        """确保会话初始化"""
-        if not self.session or self.session.closed:
-            self.session = aiohttp.ClientSession()
+        """确保会话连接"""
+        if self.session is None or self.session.closed:
+            self.session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=300)
+            )
 
     async def on_disable(self):
-        """插件禁用时清理资源"""
+        """清理资源"""
         if self.session and not self.session.closed:
             await self.session.close()
+            self.session = None
 
-    async def _call_sd_api(self, prompt: str) -> dict:
-        """调用SD API核心方法"""
-        await self.ensure_session()
-
-        payload = {
+    async def _generate_payload(self, prompt: str) -> dict:
+        """构建生成参数"""
+        params = self.config["default_params"]
+        return {
             "prompt": prompt,
             "negative_prompt": self.config["negative_prompt"],
-            "width": self.config["default_width"],
-            "height": self.config["default_height"],
-            "steps": 20,
-            "sampler_name": self.config["sampler"],
-            "cfg_scale": self.config["cfg_scale"],
+            "width": params["width"],
+            "height": params["height"],
+            "steps": params["steps"],
+            "sampler_name": params["sampler"],
+            "cfg_scale": params["cfg_scale"],
             "override_settings": {
                 "sd_model_checkpoint": "model.safetensors"
             }
         }
 
+    async def _call_sd_api(self, prompt: str) -> dict:
+        """调用SD API"""
+        await self.ensure_session()
+        payload = await self._generate_payload(prompt)
+
         try:
             async with self.session.post(
                     f"{self.config['webui_url']}/sdapi/v1/txt2img",
-                    json=payload,
-                    timeout=300
-            ) as response:
-                if response.status != 200:
-                    error = await response.text()
-                    raise Exception(f"API返回错误: {error}")
+                    json=payload
+            ) as resp:
+                if resp.status != 200:
+                    error = await resp.text()
+                    raise ConnectionError(f"API错误 ({resp.status}): {error}")
 
-                return await response.json()
+                return await resp.json()
 
         except aiohttp.ClientError as e:
-            raise Exception(f"连接失败: {str(e)}")
+            raise ConnectionError(f"连接失败: {str(e)}")
 
-    @filter.command("sd")
+    @command_group("sd")
+    def sd(self):
+        pass
+    @sd.command("gen")
     async def generate_image(self, event: AstrMessageEvent, *, prompt: str):
-        """图像生成指令
-
+        """生成图像指令
         Args:
-            prompt: 生成图像的描述提示词
+            prompt: 图像描述提示词
         """
         try:
             # 第一阶段：生成开始反馈
-            yield event.plain_result("🎨 开始生成图像，预计需要20秒...")
+            yield event.plain_result("🖌️ 正在生成图像，这可能需要1-2分钟...")
 
-            # 第二阶段：调用API
+            # 第二阶段：API调用
             response = await self._call_sd_api(prompt)
 
-            # 第三阶段：处理结果
+            # 第三阶段：结果处理
             if not response.get("images"):
-                raise Exception("API返回数据异常")
+                raise ValueError("API返回数据异常")
 
             image_data = response["images"][0]
-
-            # 发送base64图片
-            yield event.image_result(f"base64://{image_data}")
-
-            # 可选：发送生成参数
             info = json.loads(response["info"])
-            params = [
-                f"尺寸: {info['width']}x{info['height']}",
-                f"采样器: {info['sampler_name']}",
+
+            # 发送结果
+            yield event.image_result(f"base64://{image_data}")
+            yield event.plain_result(
+                f"✅ 生成成功\n"
+                f"尺寸: {info['width']}x{info['height']}\n"
+                f"采样器: {info['sampler_name']}\n"
                 f"种子: {info['seed']}"
-            ]
-            yield event.plain_result("生成参数:\n" + "\n".join(params))
+            )
 
         except Exception as e:
             error_msg = f"⚠️ 生成失败: {str(e)}"
             if "ConnectionError" in str(e):
-                error_msg += "\n请检查WebUI地址是否正确且服务已启动"
+                error_msg += "\n请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
             yield event.plain_result(error_msg)
+
+    @sd.command("check")
+    async def check_service(self, event: AstrMessageEvent):
+        """服务状态检查"""
+        try:
+            await self.ensure_session()
+            async with self.session.get(
+                f"{self.config['webui_url']}/sdapi/v1/progress"
+            ) as resp:
+                if resp.status == 200:
+                    yield event.plain_result("✅ 服务连接正常")
+                else:
+                    yield event.plain_result(f"⚠️ 服务异常 (状态码: {resp.status})")
+        except Exception as e:
+            yield event.plain_result(f"❌ 连接测试失败: {str(e)}")
+
+    @sd. command("help")
+    async def show_help(self, event: AstrMessageEvent):
+        """显示帮助信息"""
+        help_msg = [
+            "🖼️ Stable Diffusion 插件使用指南",
+            "指令列表:",
+            "/sdgen [提示词] - 生成图像（示例：/sdgen 星空下的城堡）",
+            "/sdcheck - 检查服务连接状态",
+            "/sdhelp - 显示本帮助信息",
+            "配置参数:",
+            f"当前模型: {self.config['default_params']['sampler']}",
+            f"默认尺寸: {self.config['default_params']['width']}x{self.config['default_params']['height']}"
+        ]
+        yield event.plain_result("\n".join(help_msg))
+
