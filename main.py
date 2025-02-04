@@ -1,6 +1,11 @@
+import logging
+
 from astrbot.api.all import *
 import aiohttp
 import json
+
+logger = logging.getLogger("astrbot")
+
 
 @register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.1")
 class SDGenerator(Star):
@@ -97,9 +102,9 @@ class SDGenerator(Star):
             )
 
         except Exception as e:
-            error_msg = f"⚠️ 生成失败: {str(e)}"
+            logger.error(f"Generate image failed, error: {e}")
             if "Cannot connect to host" in str(e):
-                error_msg += "\n请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
+                error_msg = "⚠️ 生成失败! 请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
             yield event.plain_result(error_msg)
 
     @sd.command("check")
