@@ -148,7 +148,9 @@ class SDGenerator(Star):
                 else:
                     yield event.plain_result(f"⚠️ 服务异常 (状态码: {resp.status})")
         except Exception as e:
-            yield event.plain_result(f"❌ 连接测试失败: {str(e)}")
+            if "Cannot connect to host" in str(e):
+                test_fail_msg = "❌ 连接测试失败! 请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
+                yield event.plain_result(test_fail_msg)
 
     @sd.command("help")
     async def show_help(self, event: AstrMessageEvent):
