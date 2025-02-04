@@ -89,8 +89,13 @@ class SDGenerator(Star):
             if not response.get("images"):
                 raise ValueError("API返回数据异常")
 
+            logger.debug(response)
+
             image_data = response["images"][0]
+            logger.debug(image_data)
+
             info = json.loads(response["info"])
+            logger.debug(info)
 
             # 发送结果
             yield event.image_result(f"base64://{image_data}")
