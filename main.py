@@ -61,7 +61,6 @@ class SDGenerator(Star):
             response = await provider.text_chat(f"{prompt_generate_text} {prompt}", session_id=event.session_id)
             if response.completion_text:
                 generated_prompt = response.completion_text.strip()
-                logger.debug(f"LLM generated prompt: {generated_prompt}")
                 return generated_prompt
 
         return ""
@@ -69,8 +68,7 @@ class SDGenerator(Star):
     async def _call_sd_api(self, prompt: str) -> dict:
         """调用SD API"""
         await self.ensure_session()
-        generated_prompt = await self._generate_prompt(prompt)
-        payload = await self._generate_payload(generated_prompt)
+        payload = await self._generate_payload(prompt)
 
         try:
             async with self.session.post(
@@ -100,10 +98,14 @@ class SDGenerator(Star):
             # 第一阶段：生成开始反馈
             yield event.plain_result("🖌️ 正在生成图像，这可能需要1-2分钟...")
 
-            # 第二阶段：API调用
-            response = await self._call_sd_api(prompt)
+            # 第二阶段：生成提示词
+            generated_prompt = await self._generate_prompt(prompt)
+            logger.debug(f"LLM generated prompt: {generated_prompt}")
 
-            # 第三阶段：结果处理
+            # 第三阶段：API调用
+            response = await self._call_sd_api(generated_prompt)
+
+            # 第四阶段：结果处理
             if not response.get("images"):
                 raise ValueError("API返回数据异常")
 
@@ -131,7 +133,7 @@ class SDGenerator(Star):
             logger.error(f"Generate image failed, error: {e}")
             if "Cannot connect to host" in str(e):
                 error_msg = "⚠️ 生成失败! 请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
-            yield event.plain_result(error_msg)
+                yield event.plain_result(error_msg)
 
     @sd.command("check")
     async def check_service(self, event: AstrMessageEvent):
