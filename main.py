@@ -207,13 +207,14 @@ class SDGenerator(Star):
         """获取当前图像生成的参数"""
         params = self.config.get("default_params", {})
 
-        width = params.get("width", "未设置")
-        height = params.get("height", "未设置")
-        steps = params.get("steps", "未设置")
-        sampler = params.get("sampler", "未设置")
-        cfg_scale = params.get("cfg_scale", "未设置")
+        width = params.get("width") or "未设置"
+        height = params.get("height") or "未设置"
+        steps = params.get("steps") or "未设置"
+        sampler = params.get("sampler") or "未设置"
+        cfg_scale = params.get("cfg_scale") or "未设置"
 
-        model_checkpoint = self.config.get("sd_model_checkpoint", "未设置")
+        model_checkpoint = self.config.get("sd_model_checkpoint").strip() or "未设置"
+
 
         return (
             f"当前模型: {model_checkpoint}\n"
@@ -246,7 +247,8 @@ class SDGenerator(Star):
         """打印当前图像生成参数，包括当前使用的模型"""
         try:
             gen_params = self._get_generation_params()  # 获取当前图像参数
-            prompt_guidelines = self.config.get("prompt_guidelines", "未设置")  # 获取提示词限制
+            prompt_guidelines = self.config.get("prompt_guidelines").strip() or "未设置"  # 获取提示词限制
+
             verbose = self.config.get("verbose", True)  # 获取详略模式
 
             conf_message = (
