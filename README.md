@@ -5,7 +5,8 @@
 
 ## 用法
 ### 安装插件，对插件进行配置
-![img.png](screenshot/img.png)
+![img.png](img.png)
+
 - WebUI API地址： HTTP/HTTPS协议 + Stable Diffusion WebUI所在的IP + 端口号
 - 全局负面提示词，通常无需修改，也可自己定义
 - 用于生成图像的相关参数
@@ -15,10 +16,12 @@
   - 采样步数
   - 采样方法
   - 提示词权重（决定了模型在生成图像时，对提示词的遵循程度）
-
     - 值较低（如 1-3）：图像更随机，可能会偏离提示词描述，但创造性更高。
     - 值较高（如 10-15）：图像更严格遵循提示词，但可能导致细节过度锐化或不自然。
     - 一般推荐范围：7-12 之间，默认通常是 7 或 8。
+- 图像生成模型
+- 详细回复开关
+- LLM附加限制
 ### 关于Stable Diffusion WebUI的部署建议
 1. 克隆仓库
 ```bash
@@ -59,7 +62,7 @@ pip install -r requirements.txt
 ```
 # 支持
 QQ： 1259085392
-- 请尽可能自己debug，实在无法解决的问题再寻求帮助。
+- 请尽可能自己debug，实在无法解决的问题再寻求帮助
 - 任何代码方面问题，请随时发issues
 
 [帮助文档](https://astrbot.soulter.top/center/docs/%E5%BC%80%E5%8F%91/%E6%8F%92%E4%BB%B6%E5%BC%80%E5%8F%91/

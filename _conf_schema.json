@@ -75,7 +75,7 @@
     },
     "sd_model_checkpoint": {
         "type": "string",
-        "description": "可用图像生成模型",
+        "description": "图像生成模型",
         "default": "",
         "hint": "默认为空，可直接填写，也可以自动获取"
     },
