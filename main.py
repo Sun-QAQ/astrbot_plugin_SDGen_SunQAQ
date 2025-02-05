@@ -208,7 +208,7 @@ class SDGenerator(Star):
         sampler = params.get("sampler", "未设置")
         cfg_scale = params.get("cfg_scale", "未设置")
 
-        model_checkpoint = self.config.get("default_params", {}).get("sd_model_checkpoint", "未设置")
+        model_checkpoint = self.config.get("sd_model_checkpoint", "未设置")
 
         return (
             f"当前模型: {model_checkpoint}\n"
@@ -266,8 +266,7 @@ class SDGenerator(Star):
             yield event.plain_result("❌ 获取模型列表失败，请检查 WebUI 是否运行")
 
     @model.command("set")
-    async def set_model_command(self, event: AstrMessageEvent, model_index: str):
-        logger.debug(f"model_index: {model_index}")
+    async def set_model_command(self, event: AstrMessageEvent, model_index: int):
         """
         解析用户输入的索引，并设置对应的模型
         """
