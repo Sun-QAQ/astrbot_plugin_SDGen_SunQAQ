@@ -36,26 +36,20 @@ class SDGenerator(Star):
             self.session = None
 
     async def _get_model_list(self):
-        """获取可用模型列表，直接从配置读取"""
-        model_names = self.config.get("sd_model_checkpoint", {}).get("enum", [])
-        if not model_names:
-            # 如果配置中没有模型列表，则调用更新方法
-            await self._update_model_enum()
-            model_names = self.config.get("sd_model_checkpoint", {}).get("enum", [])
-        return model_names
-
-    async def _update_model_enum(self):
-        """从 WebUI API 获取可用模型列表并更新配置"""
+        """直接从 WebUI API 获取可用模型列表"""
         try:
             async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/sd-models") as resp:
                 if resp.status == 200:
                     models = await resp.json()
+                    logger.debug(f"models: {models}")
                     if models:
                         model_names = [m["model_name"] for m in models]
-                        self.config["sd_model_checkpoint"]["enum"] = model_names  # 更新配置中的模型列表
                         logger.debug(f"可用模型: {model_names}")
+                        return model_names  # 直接返回模型列表
         except Exception as e:
-            logger.error(f"更新模型列表失败: {e}")
+            logger.error(f"获取模型列表失败: {e}")
+
+        return []  # 发生错误时返回空列表
 
     async def _generate_payload(self, prompt: str) -> dict:
         """构建生成参数"""
@@ -70,9 +64,6 @@ class SDGenerator(Star):
             "steps": params["steps"],
             "sampler_name": params["sampler"],
             "cfg_scale": params["cfg_scale"],
-            "override_settings": {
-                "sd_model_checkpoint": model_checkpoint,
-            }
         }
 
     async def _generate_prompt(self, prompt: str) -> str:
@@ -164,18 +155,42 @@ class SDGenerator(Star):
                 error_msg = "⚠️ 生成失败! 请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
                 yield event.plain_result(error_msg)
 
+    async def set_model(self, model_name: str) -> bool:
+        """设置 SD WebUI 的默认模型，并存入 config"""
+        try:
+            async with self.session.post(
+                    f"{self.config['webui_url']}/sdapi/v1/options",
+                    json={"sd_model_checkpoint": model_name}
+            ) as resp:
+                if resp.status == 200:
+                    self.config["sd_model_checkpoint"] = model_name  # 存入 config
+                    logger.debug(f"默认模型已设置为: {model_name}")
+                    return True
+                else:
+                    logger.error(f"设置默认模型失败 (状态码: {resp.status})")
+                    return False
+        except Exception as e:
+            logger.error(f"设置默认模型异常: {e}")
+            return False
+
     @sd.command("check")
-    async def check_service(self, event: AstrMessageEvent):
+    async def check(self, event: AstrMessageEvent):
         """服务状态检查"""
         try:
             await self.ensure_session()
-            async with self.session.get(
-                f"{self.config['webui_url']}/sdapi/v1/progress"
-            ) as resp:
+            async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/progress") as resp:
                 if resp.status == 200:
-                    # 如果服务连接正常，则更新模型列表
-                    await self._update_model_enum()
-                    yield event.plain_result("✅ 服务连接正常，模型列表已更新")
+                    # 服务连接正常，获取可用模型列表
+                    model_names = await self._get_model_list()
+
+                    if model_names:
+                        default_model = model_names[0]  # 选择第一个模型
+                        if await self.set_model(default_model):
+                            yield event.plain_result(f"✅ 服务连接正常，已设置默认模型：{default_model}")
+                        else:
+                            yield event.plain_result(f"✅ 服务连接正常，但默认模型设置失败")
+                    else:
+                        yield event.plain_result("⚠️ 服务连接正常，但未获取到可用模型")
                 else:
                     yield event.plain_result(f"⚠️ 服务异常 (状态码: {resp.status})")
         except Exception as e:
@@ -251,34 +266,28 @@ class SDGenerator(Star):
             yield event.plain_result("❌ 获取模型列表失败，请检查 WebUI 是否运行")
 
     @model.command("set")
-    async def set_model(self, event: AstrMessageEvent, model_index: str):
+    async def set_model_command(self, event: AstrMessageEvent, model_index: str):
         """
-        首先转为数字，然后设置数字对应模型
+        解析用户输入的索引，并设置对应的模型
         """
         try:
-            models = await self._get_model_list()  # 使用统一方法获取模型列表
+            models = await self._get_model_list()
             if not models:
                 yield event.plain_result("⚠️ 没有可用的模型")
                 return
 
             try:
-                index = int(model_index) - 1
+                index = int(model_index) - 1  # 转换为 0-based 索引
                 if index < 0 or index >= len(models):
                     yield event.plain_result("❌ 无效的模型索引，请检查 /sd model list")
                     return
 
-                selected_model = models[index]["model_name"]
+                selected_model = models[index]  # 直接取模型名
 
-                # 发送设置请求
-                async with self.session.post(
-                        f"{self.config['webui_url']}/sdapi/v1/options",
-                        json={"sd_model_checkpoint": selected_model}
-                ) as set_resp:
-                    if set_resp.status == 200:
-                        self.config["default_params"]["sd_model_checkpoint"] = selected_model
-                        yield event.plain_result(f"✅ 模型已切换为: {selected_model}")
-                    else:
-                        yield event.plain_result(f"⚠️ 切换模型失败 (状态码: {set_resp.status})")
+                if await self.set_model(selected_model):
+                    yield event.plain_result(f"✅ 模型已切换为: {selected_model}")
+                else:
+                    yield event.plain_result("⚠️ 切换模型失败，请检查 WebUI 状态")
 
             except ValueError:
                 yield event.plain_result("❌ 请输入有效的数字索引")
@@ -286,3 +295,4 @@ class SDGenerator(Star):
         except Exception as e:
             logger.error(f"切换模型失败: {e}")
             yield event.plain_result("❌ 切换模型失败，请检查 WebUI 是否运行")
+
