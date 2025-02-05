@@ -258,7 +258,7 @@ class SDGenerator(Star):
                 yield event.plain_result("⚠️ 没有可用的模型")
                 return
 
-            model_list = "\n".join(f"{i + 1}. {m['model_name']}" for i, m in enumerate(models))
+            model_list = "\n".join(f"{i + 1}. {m}" for i, m in enumerate(models))
             yield event.plain_result(f"🖼️ 可用模型列表:\n{model_list}")
 
         except Exception as e:
