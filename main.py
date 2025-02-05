@@ -254,7 +254,7 @@ class SDGenerator(Star):
 
     @sd.command("upscale")
     async def set_upscale(self, event: AstrMessageEvent):
-        """切换高分辨率处理模式（enable_upscale）"""
+        """设置图像增强模式（enable_upscale）"""
         try:
             # 获取当前的 upscale 配置值
             current_upscale = self.config.get("enable_upscale", False)
@@ -278,16 +278,25 @@ class SDGenerator(Star):
         """打印当前图像生成参数，包括当前使用的模型"""
         try:
             gen_params = self._get_generation_params()  # 获取当前图像参数
+            gen_params_message = "\n".join([f"- {key}：{value}" for key, value in gen_params.items()])
+
             prompt_guidelines = self.config.get("prompt_guidelines").strip() or "未设置"  # 获取提示词限制
 
             verbose = self.config.get("verbose", True)           # 获取详略模式
             upscale = self.config.get("enable_upscale", False)   # 图像增强模式
 
+            upscale_factor = self.config.get("upscale_factor", 2)  # 默认放大倍数为2
+            upscaler = self.config.get("upscaler", "ESRGAN_4x")
+
+
             conf_message = (
-                f"📌 当前图像生成参数:\n{gen_params}\n\n"
+                f"📌 图像生成参数:\n{gen_params_message}\n\n"
+                f"⚙️ 图像增强参数:\n"
+                f"- 放大倍数: {upscale_factor}\n"
+                f"- 上采样算法: {upscaler}\n\n"
                 f"🛠️  提示词附加要求: {prompt_guidelines}\n\n"
-                f"📢  详细模式: {'开启' if verbose else '关闭'}\n\n"
-                f"🔧  图像增强模式: {'开启' if upscale else '关闭'}"
+                f"📢  详细打印模式: {'开启' if verbose else '关闭'}\n\n"
+                f"🔧  图像增强模式: {'开启' if upscale else '关闭'}\n\n"
             )
 
             yield event.plain_result(conf_message)
@@ -305,7 +314,7 @@ class SDGenerator(Star):
             "/sd check - 检查服务连接状态（首次运行时获取可用模型列表）",
             "/sd conf - 打印图像生成参数",
             "/sd verbose - 设置详细模式",
-            "/sd upscale - 设置图像增强"
+            "/sd upscale - 设置图像增强",
             "/sd help - 显示本帮助信息",
             "/sd model list - 列出所有可用模型",
             "/sd model set [模型索引] - 设置当前模型（根据索引选择）",
