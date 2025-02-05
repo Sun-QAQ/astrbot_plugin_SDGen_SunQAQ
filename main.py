@@ -267,11 +267,11 @@ class SDGenerator(Star):
 
             # 发送反馈消息
             status = "开启" if new_upscale else "关闭"
-            yield event.plain_result(f"📢 高分辨率处理模式已{status}")
+            yield event.plain_result(f"📢 图像增强模式已{status}")
 
         except Exception as e:
-            logger.error(f"切换高分辨率放大模式失败: {e}")
-            yield event.plain_result("❌ 切换高分辨率放大模式失败，请检查配置")
+            logger.error(f"切换图像增强模式失败: {e}")
+            yield event.plain_result("❌ 切换图像增强模式失败，请检查配置")
 
     @sd.command("conf")
     async def show_conf(self, event: AstrMessageEvent):
@@ -280,12 +280,14 @@ class SDGenerator(Star):
             gen_params = self._get_generation_params()  # 获取当前图像参数
             prompt_guidelines = self.config.get("prompt_guidelines").strip() or "未设置"  # 获取提示词限制
 
-            verbose = self.config.get("verbose", True)  # 获取详略模式
+            verbose = self.config.get("verbose", True)           # 获取详略模式
+            upscale = self.config.get("enable_upscale", False)   # 图像增强模式
 
             conf_message = (
                 f"📌 当前图像生成参数:\n{gen_params}\n\n"
                 f"🛠️  提示词附加要求: {prompt_guidelines}\n\n"
-                f"📢  详细模式: {'开启' if verbose else '关闭'}"
+                f"📢  详细模式: {'开启' if verbose else '关闭'}\n\n"
+                f"🔧  图像增强模式: {'开启' if upscale else '关闭'}"
             )
 
             yield event.plain_result(conf_message)
@@ -302,7 +304,8 @@ class SDGenerator(Star):
             "/sd gen [提示词] - 生成图像（示例：/sd gen 星空下的城堡）",
             "/sd check - 检查服务连接状态（首次运行时获取可用模型列表）",
             "/sd conf - 打印图像生成参数",
-            "/sd verbose - 设置详细模式"
+            "/sd verbose - 设置详细模式",
+            "/sd upscale - 设置图像增强"
             "/sd help - 显示本帮助信息",
             "/sd model list - 列出所有可用模型",
             "/sd model set [模型索引] - 设置当前模型（根据索引选择）",
