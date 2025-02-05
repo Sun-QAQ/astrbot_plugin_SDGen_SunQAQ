@@ -42,8 +42,8 @@ class SDGenerator(Star):
                 if resp.status == 200:
                     models = await resp.json()
                     logger.debug(f"models: {models}")
-                    if models:
-                        model_names = [m["model_name"] for m in models]
+                    if isinstance(models, list):
+                        model_names = [m["model_name"] for m in models if "model_name" in m]
                         logger.debug(f"可用模型: {model_names}")
                         return model_names  # 直接返回模型列表
         except Exception as e:
