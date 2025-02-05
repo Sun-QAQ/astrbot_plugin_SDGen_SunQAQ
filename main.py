@@ -294,11 +294,11 @@ class SDGenerator(Star):
             upscale = self.config.get("enable_upscale", False)   # 图像增强模式
 
             conf_message = (
-                f"📌 图像生成参数:\n{gen_params}\n\n"
-                f"⚙️ 图像增强参数:\n{scale_params}\n\n"
+                f"⚙️  图像生成参数:\n{gen_params}\n\n"
+                f"🔍  图像增强参数:\n{scale_params}\n\n"
                 f"🛠️  提示词附加要求: {prompt_guidelines}\n\n"
                 f"📢  详细打印模式: {'开启' if verbose else '关闭'}\n\n"
-                f"🔧  图像增强模式: {'开启' if upscale else '关闭'}\n\n"
+                f"🔧  图像增强模式: {'开启' if upscale else '关闭'}"
             )
 
             yield event.plain_result(conf_message)
