@@ -29,12 +29,6 @@ class SDGenerator(Star):
                 timeout=aiohttp.ClientTimeout(total=300)
             )
 
-    async def on_disable(self):
-        """清理资源"""
-        if self.session and not self.session.closed:
-            await self.session.close()
-            self.session = None
-
     async def _get_model_list(self):
         """直接从 WebUI API 获取可用模型列表"""
         try:
@@ -86,24 +80,55 @@ class SDGenerator(Star):
 
         return ""
 
-    async def _call_sd_api(self, prompt: str) -> dict:
-        """调用SD API"""
+    async def _call_sd_api(self, endpoint: str, payload: dict) -> dict:
+        """通用API调用函数"""
         await self.ensure_session()
-        payload = await self._generate_payload(prompt)
-
         try:
             async with self.session.post(
-                    f"{self.config['webui_url']}/sdapi/v1/txt2img",
+                    f"{self.config['webui_url']}{endpoint}",
                     json=payload
             ) as resp:
                 if resp.status != 200:
                     error = await resp.text()
                     raise ConnectionError(f"API错误 ({resp.status}): {error}")
-
                 return await resp.json()
-
         except aiohttp.ClientError as e:
             raise ConnectionError(f"连接失败: {str(e)}")
+
+    async def _call_t2i_api(self, prompt: str) -> dict:
+        """调用 Stable Diffusion 文生图 API"""
+        await self.ensure_session()
+        payload = await self._generate_payload(prompt)
+        return await self._call_sd_api("/sdapi/v1/txt2img", payload)
+
+    async def _apply_image_processing(self, image_base64: str) -> str:
+        """统一处理高分辨率修复与超分辨率放大"""
+
+        # 获取配置参数
+        upscale_factor = self.config.get("upscale_factor", 2)
+        upscaler = self.config.get("upscaler", "Latent")
+
+        # 根据配置构建payload
+        payload = {
+            "image": image_base64,
+            "upscaling_resize": upscale_factor,  # 使用配置的放大倍数
+            "upscaler_1": upscaler,  # 使用配置的上采样算法
+            "resize_mode": 0,  # 标准缩放模式
+            "show_extras_results": True,  # 显示额外结果
+            "upscaling_resize_w": 0,  # 自动计算宽度
+            "upscaling_resize_h": 0,  # 自动计算高度
+            "upscaling_crop": False,  # 不裁剪图像
+            "gfpgan_visibility": 0,  # 不使用人脸修复
+            "codeformer_visibility": 0,  # 不使用CodeFormer修复
+            "codeformer_weight": 0,  # 不使用CodeFormer权重
+            "extras_upscaler_2_visibility": 0  # 不使用额外的上采样算法
+        }
+
+        if self.config.get("enable_upscale"):
+            resp = await self._call_sd_api("/sdapi/v1/extra-single-image", payload)
+            return resp["image"]
+        else:
+            return image_base64
 
     @command_group("sd")
     def sd(self):
@@ -118,40 +143,35 @@ class SDGenerator(Star):
         try:
             verbose = self.config["verbose"]
             if verbose:
-                # 第一阶段：生成开始反馈
-                yield event.plain_result("🖌️ 正在生成图像，这可能需要一段时间...")
+                yield event.plain_result("🖌️ 生成图像阶段，这可能需要一段时间...")
 
-            # 第二阶段：生成提示词
+            # 生成提示词
             generated_prompt = await self._generate_prompt(prompt)
             logger.debug(f"LLM generated prompt: {generated_prompt}")
 
-            # 第三阶段：API调用
-            response = await self._call_sd_api(generated_prompt)
-
-            # 第四阶段：结果处理
+            # 生成图像
+            response = await self._call_t2i_api(generated_prompt)
             if not response.get("images"):
                 raise ValueError("API返回数据异常")
 
             image_data = response["images"][0]
             logger.debug(f"img: {image_data}")
 
-            info = json.loads(response["info"])
-            logger.debug(f"info: {info}")
-
             image_bytes = base64.b64decode(image_data)
+            image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
+            # 图像处理
+            if verbose:
+                yield event.plain_result("🖼️ 处理图像阶段，即将结束")
+            image = await self._apply_image_processing(image_base64)
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_image:
-                temp_image.write(image_bytes)
+                temp_image.write(base64.b64decode(image))
                 temp_image_path = temp_image.name  # 获取临时文件路径
 
             yield event.image_result(temp_image_path)
             if verbose:
-                yield event.plain_result(
-                    f"✅ 生成成功\n"
-                    f"尺寸: {info['width']}x{info['height']}\n"
-                    f"采样器: {info['sampler_name']}\n"
-                    f"种子: {info['seed']}"
-                )
+                yield event.plain_result("✅ 图像生成成功")
 
             os.remove(temp_image_path)
         except Exception as e:
@@ -169,7 +189,7 @@ class SDGenerator(Star):
             ) as resp:
                 if resp.status == 200:
                     self.config["sd_model_checkpoint"] = model_name  # 存入 config
-                    logger.debug(f"默认模型已设置为: {model_name}")
+                    logger.debug(f"模型已设置为: {model_name}")
                     return True
                 else:
                     logger.error(f"设置默认模型失败 (状态码: {resp.status})")

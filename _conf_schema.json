@@ -17,6 +17,12 @@
         "default": "(worst quality, low quality:1.4), deformed, bad anatomy",
         "hint": "会自动附加到所有生成请求"
     },
+    "enable_upscale": {
+        "type": "bool",
+        "description": "启用高分辨率修复和超分辨放大功能",
+        "default": false,
+        "hint": "设置为true时启用"
+    },
     "default_params": {
         "type": "object",
         "description": "默认生成参数",
@@ -49,20 +55,9 @@
                 "type": "string",
                 "default": "DPM++ 2M",
                 "options": [
-                    "Euler a",
-                    "Euler",
-                    "Heun",
-                    "DPM2",
-                    "DPM2 a",
-                    "DPM++ 2M",
-                    "DPM++ 2M SDE",
-                    "DPM++ 2M SDE Heun",
-                    "DPM++ 2S a",
-                    "DPM++ 3M SDE",
-                    "DDIM",
-                    "LMS",
-                    "PLMS",
-                    "UniPC"
+                    "Euler a", "Euler", "Heun", "DPM2", "DPM2 a",
+                    "DPM++ 2M", "DPM++ 2M SDE", "DPM++ 2M SDE Heun",
+                    "DPM++ 2S a", "DPM++ 3M SDE", "DDIM", "LMS", "PLMS", "UniPC"
                 ]
             },
             "cfg_scale": {
@@ -70,6 +65,25 @@
                 "default": 7,
                 "min": 1,
                 "max": 20
+            },
+            "upscaler": {
+                "type": "string",
+                "default": "ESRGAN_4x",
+                "options": [
+                    "Latent", "Latent(antialiased)", "Latent(bicubic)", "Latent(bicubic antialiased)",
+                    "Latent(nearest)", "Latent(nearest-exact)", "None", "Lanczos", "Nearest", "DAT x2",
+                    "DAT x3", "DAT x4", "ESRGAN_4x", "LDSR", "R-ESRGAN 4x+", "R-ESRGAN 4x+ Anime6B",
+                    "ScuNET", "SCUNET PSNR", "SwinlR_4x"
+                ],
+                "hint": "选择用于图像放大的算法。常见算法如ESRGAN、R-ESRGAN等"
+            },
+            "upscale_factor": {
+                "type": "int",
+                "description": "图像放大倍数",
+                "default": 2,
+                "min": 1,
+                "max": 8,
+                "hint": "放大倍数，通常为2、4等"
             }
         }
     },
