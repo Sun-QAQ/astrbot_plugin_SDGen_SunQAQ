@@ -71,6 +71,6 @@
         "type": "string",
         "description": "可用图像生成模型",
         "default": "",
-        "hint": "可用模型列表将从 WebUI API 获取"
+        "hint": "默认为空，可直接填写，也可以自动获取"
     }
 }

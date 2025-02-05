@@ -20,7 +20,7 @@ class SDGenerator(Star):
             raise ValueError("WebUI地址必须以http://或https://开头")
 
         if self.config["webui_url"].endswith("/"):
-            raise ValueError("WebUI地址不能以斜杠 / 结尾")
+            self.config["webui_url"] = self.config["webui_url"].rstrip("/")
 
     async def ensure_session(self):
         """确保会话连接"""
@@ -38,6 +38,7 @@ class SDGenerator(Star):
     async def _get_model_list(self):
         """直接从 WebUI API 获取可用模型列表"""
         try:
+            await self.ensure_session()
             async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/sd-models") as resp:
                 if resp.status == 200:
                     models = await resp.json()
@@ -54,7 +55,6 @@ class SDGenerator(Star):
     async def _generate_payload(self, prompt: str) -> dict:
         """构建生成参数"""
         params = self.config["default_params"]
-        model_checkpoint = self.config["sd_model_checkpoint"] # 默认模型名
 
         return {
             "prompt": prompt,
@@ -212,8 +212,8 @@ class SDGenerator(Star):
 
         return (
             f"当前模型: {model_checkpoint}\n"
-            f"默认尺寸: {width}x{height}\n"
-            f"生成步骤: {steps}\n"
+            f"图片尺寸: {width}x{height}\n"
+            f"生成步数: {steps}\n"
             f"采样器: {sampler}\n"
             f"CFG比例: {cfg_scale}"
         )
