@@ -247,7 +247,7 @@ class SDGenerator(Star):
 
     @sd.command("verbose")
     async def set_verbose(self, event: AstrMessageEvent):
-        """切换详细模式（verbose）"""
+        """切换详细输出模式（verbose）"""
         try:
             # 读取当前状态并取反
             current_verbose = self.config.get("verbose", True)
@@ -258,7 +258,7 @@ class SDGenerator(Star):
 
             # 发送反馈消息
             status = "开启" if new_verbose else "关闭"
-            yield event.plain_result(f"📢 详细模式已{status}")
+            yield event.plain_result(f"📢 详细输出模式已{status}")
         except Exception as e:
             logger.error(f"切换详细模式失败: {e}")
             yield event.plain_result("❌ 切换详细模式失败，请检查配置")
@@ -299,7 +299,7 @@ class SDGenerator(Star):
                 f"⚙️  图像生成参数:\n{gen_params}\n\n"
                 f"🔍  图像增强参数:\n{scale_params}\n\n"
                 f"🛠️  提示词附加要求: {prompt_guidelines}\n\n"
-                f"📢  详细打印模式: {'开启' if verbose else '关闭'}\n\n"
+                f"📢  详细输出模式: {'开启' if verbose else '关闭'}\n\n"
                 f"🔧  图像增强模式: {'开启' if upscale else '关闭'}"
             )
 
