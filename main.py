@@ -213,7 +213,7 @@ class SDGenerator(Star):
                 test_fail_msg = "❌ 连接测试失败! 请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
                 yield event.plain_result(test_fail_msg)
 
-    def _get_generation_params(self):
+    def _get_generation_params(self) -> str:
         """获取当前图像生成的参数"""
         params = self.config.get("default_params", {})
 
@@ -225,13 +225,22 @@ class SDGenerator(Star):
 
         model_checkpoint = self.config.get("sd_model_checkpoint").strip() or "未设置"
 
+        return (
+            f"- 当前模型: {model_checkpoint}\n"
+            f"- 图片尺寸: {width}x{height}\n"
+            f"- 步数: {steps}\n"
+            f"- 采样器: {sampler}\n"
+            f"- CFG比例: {cfg_scale}"
+        )
+
+    def _get_upscale_params(self) -> str:
+        """获取当前图像增强（超分辨率放大）参数"""
+        upscale_factor = self.config.get("upscale_factor", 2)  # 默认放大倍数为2
+        upscaler = self.config.get("upscaler", "Latent")  # 默认上采样算法为 Latent
 
         return (
-            f"当前模型: {model_checkpoint}\n"
-            f"图片尺寸: {width}x{height}\n"
-            f"步数: {steps}\n"
-            f"采样器: {sampler}\n"
-            f"CFG比例: {cfg_scale}"
+            f"- 放大倍数: {upscale_factor}\n"
+            f"- 上采样算法: {upscaler}"
         )
 
     @sd.command("verbose")
@@ -278,22 +287,15 @@ class SDGenerator(Star):
         """打印当前图像生成参数，包括当前使用的模型"""
         try:
             gen_params = self._get_generation_params()  # 获取当前图像参数
-            gen_params_message = "\n".join([f"- {key}：{value}" for key, value in gen_params.items()])
-
+            scale_params = self._get_upscale_params()   # 获取图像增强参数
             prompt_guidelines = self.config.get("prompt_guidelines").strip() or "未设置"  # 获取提示词限制
 
             verbose = self.config.get("verbose", True)           # 获取详略模式
             upscale = self.config.get("enable_upscale", False)   # 图像增强模式
 
-            upscale_factor = self.config.get("upscale_factor", 2)  # 默认放大倍数为2
-            upscaler = self.config.get("upscaler", "ESRGAN_4x")
-
-
             conf_message = (
-                f"📌 图像生成参数:\n{gen_params_message}\n\n"
-                f"⚙️ 图像增强参数:\n"
-                f"- 放大倍数: {upscale_factor}\n"
-                f"- 上采样算法: {upscaler}\n\n"
+                f"📌 图像生成参数:\n{gen_params}\n\n"
+                f"⚙️ 图像增强参数:\n{scale_params}\n\n"
                 f"🛠️  提示词附加要求: {prompt_guidelines}\n\n"
                 f"📢  详细打印模式: {'开启' if verbose else '关闭'}\n\n"
                 f"🔧  图像增强模式: {'开启' if upscale else '关闭'}\n\n"
