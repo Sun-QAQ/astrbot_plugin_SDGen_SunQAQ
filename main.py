@@ -50,7 +50,7 @@ class SDGenerator(Star):
         except Exception as e:
             logger.error(f"获取模型列表失败: {e}")
 
-        return []  # 发生错误时返回空列表
+        return []
 
     async def _generate_payload(self, prompt: str) -> dict:
         """构建生成参数"""
@@ -69,11 +69,13 @@ class SDGenerator(Star):
     async def _generate_prompt(self, prompt: str) -> str:
         provider = self.context.get_using_provider()
         if provider:
+            prompt_guidelines = self.config["prompt_guidelines"]
             prompt_generate_text = (
                 "请根据以下描述生成用于 Stable Diffusion WebUI 的提示词，"
                 "请返回一条逗号分隔的 `prompt` 英文字符串，适用于 SD-WebUI，"
                 "其中应包含主体、风格、光照、色彩等方面的描述，"
-                "避免解释性文本，直接返回 `prompt`，不要加任何额外说明。\n\n"
+                "避免解释性文本，直接返回 `prompt`，不要加任何额外说明。"
+                f"{prompt_guidelines}\n"
                 "描述："
             )
 
@@ -114,8 +116,10 @@ class SDGenerator(Star):
             prompt: 图像描述提示词
         """
         try:
-            # 第一阶段：生成开始反馈
-            yield event.plain_result("🖌️ 正在生成图像，这可能需要1-2分钟...")
+            verbose = self.config["verbose"]
+            if verbose:
+                # 第一阶段：生成开始反馈
+                yield event.plain_result("🖌️ 正在生成图像，这可能需要一段时间...")
 
             # 第二阶段：生成提示词
             generated_prompt = await self._generate_prompt(prompt)
@@ -141,12 +145,13 @@ class SDGenerator(Star):
                 temp_image_path = temp_image.name  # 获取临时文件路径
 
             yield event.image_result(temp_image_path)
-            yield event.plain_result(
-                f"✅ 生成成功\n"
-                f"尺寸: {info['width']}x{info['height']}\n"
-                f"采样器: {info['sampler_name']}\n"
-                f"种子: {info['seed']}"
-            )
+            if verbose:
+                yield event.plain_result(
+                    f"✅ 生成成功\n"
+                    f"尺寸: {info['width']}x{info['height']}\n"
+                    f"采样器: {info['sampler_name']}\n"
+                    f"种子: {info['seed']}"
+                )
 
             os.remove(temp_image_path)
         except Exception as e:
@@ -236,7 +241,7 @@ class SDGenerator(Star):
             "指令列表:",
             "/sd gen [提示词] - 生成图像（示例：/sd gen 星空下的城堡）",
             "/sd check - 检查服务连接状态（首次运行时获取可用模型列表）",
-            "/sd conf - 打印图像生成参数"
+            "/sd conf - 打印图像生成参数",
             "/sd help - 显示本帮助信息",
             "/sd model list - 列出所有可用模型",
             "/sd model set [模型索引] - 设置当前模型（根据索引选择）",
