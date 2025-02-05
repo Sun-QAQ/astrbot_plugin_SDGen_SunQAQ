@@ -1,11 +1,12 @@
 import logging
+import tempfile
+
 import aiohttp
 from astrbot.api.all import *
 
 logger = logging.getLogger("astrbot")
 
-
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.1")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.2")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -17,6 +18,9 @@ class SDGenerator(Star):
         """配置验证"""
         if not self.config["webui_url"].startswith(("http://", "https://")):
             raise ValueError("WebUI地址必须以http://或https://开头")
+
+        if self.config["webui_url"].endswith("/"):
+            raise ValueError("WebUI地址不能以斜杠 / 结尾")
 
     async def ensure_session(self):
         """确保会话连接"""
@@ -31,9 +35,33 @@ class SDGenerator(Star):
             await self.session.close()
             self.session = None
 
+    async def _get_model_list(self):
+        """获取可用模型列表，直接从配置读取"""
+        model_names = self.config.get("sd_model_checkpoint", {}).get("enum", [])
+        if not model_names:
+            # 如果配置中没有模型列表，则调用更新方法
+            await self._update_model_enum()
+            model_names = self.config.get("sd_model_checkpoint", {}).get("enum", [])
+        return model_names
+
+    async def _update_model_enum(self):
+        """从 WebUI API 获取可用模型列表并更新配置"""
+        try:
+            async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/sd-models") as resp:
+                if resp.status == 200:
+                    models = await resp.json()
+                    if models:
+                        model_names = [m["model_name"] for m in models]
+                        self.config["sd_model_checkpoint"]["enum"] = model_names  # 更新配置中的模型列表
+                        logger.debug(f"可用模型: {model_names}")
+        except Exception as e:
+            logger.error(f"更新模型列表失败: {e}")
+
     async def _generate_payload(self, prompt: str) -> dict:
         """构建生成参数"""
         params = self.config["default_params"]
+        model_checkpoint = self.config["sd_model_checkpoint"] # 默认模型名
+
         return {
             "prompt": prompt,
             "negative_prompt": self.config["negative_prompt"],
@@ -43,7 +71,7 @@ class SDGenerator(Star):
             "sampler_name": params["sampler"],
             "cfg_scale": params["cfg_scale"],
             "override_settings": {
-                "sd_model_checkpoint": "model.safetensors"
+                "sd_model_checkpoint": model_checkpoint,
             }
         }
 
@@ -117,11 +145,11 @@ class SDGenerator(Star):
 
             image_bytes = base64.b64decode(image_data)
 
-            with open("output.jpg", "wb") as image_file:
-                image_file.write(image_bytes)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_image:
+                temp_image.write(image_bytes)
+                temp_image_path = temp_image.name  # 获取临时文件路径
 
-            # 发送结果
-            yield event.image_result("output.jpg")
+            yield event.image_result(temp_image_path)
             yield event.plain_result(
                 f"✅ 生成成功\n"
                 f"尺寸: {info['width']}x{info['height']}\n"
@@ -129,6 +157,7 @@ class SDGenerator(Star):
                 f"种子: {info['seed']}"
             )
 
+            os.remove(temp_image_path)
         except Exception as e:
             logger.error(f"Generate image failed, error: {e}")
             if "Cannot connect to host" in str(e):
@@ -144,7 +173,9 @@ class SDGenerator(Star):
                 f"{self.config['webui_url']}/sdapi/v1/progress"
             ) as resp:
                 if resp.status == 200:
-                    yield event.plain_result("✅ 服务连接正常")
+                    # 如果服务连接正常，则更新模型列表
+                    await self._update_model_enum()
+                    yield event.plain_result("✅ 服务连接正常，模型列表已更新")
                 else:
                     yield event.plain_result(f"⚠️ 服务异常 (状态码: {resp.status})")
         except Exception as e:
@@ -152,17 +183,106 @@ class SDGenerator(Star):
                 test_fail_msg = "❌ 连接测试失败! 请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
                 yield event.plain_result(test_fail_msg)
 
+    def _get_generation_params(self):
+        """获取当前图像生成的参数"""
+        params = self.config.get("default_params", {})
+
+        width = params.get("width", "未设置")
+        height = params.get("height", "未设置")
+        steps = params.get("steps", "未设置")
+        sampler = params.get("sampler", "未设置")
+        cfg_scale = params.get("cfg_scale", "未设置")
+
+        model_checkpoint = self.config.get("default_params", {}).get("sd_model_checkpoint", "未设置")
+
+        return (
+            f"当前模型: {model_checkpoint}\n"
+            f"默认尺寸: {width}x{height}\n"
+            f"生成步骤: {steps}\n"
+            f"采样器: {sampler}\n"
+            f"CFG比例: {cfg_scale}"
+        )
+
+    @sd.command("conf")
+    async def show_conf(self, event: AstrMessageEvent):
+        """打印当前图像生成参数，包括当前使用的模型"""
+        try:
+            gen_params = self._get_generation_params()  # 获取当前生成参数
+            yield event.plain_result(f"当前图像生成参数:\n{gen_params}")
+        except Exception as e:
+            logger.error(f"获取生成参数失败: {e}")
+            yield event.plain_result("❌ 获取图像生成参数失败，请检查配置是否正确")
+
     @sd.command("help")
     async def show_help(self, event: AstrMessageEvent):
         """显示帮助信息"""
         help_msg = [
             "🖼️ Stable Diffusion 插件使用指南",
             "指令列表:",
-            "/sd gen [提示词] - 生成图像（示例：/sdgen 星空下的城堡）",
+            "/sd gen [提示词] - 生成图像（示例：/sd gen 星空下的城堡）",
             "/sd check - 检查服务连接状态",
+            "/sd conf - 打印图像生成参数"
             "/sd help - 显示本帮助信息",
-            "配置参数:",
-            f"当前模型: {self.config['default_params']['sampler']}",
-            f"默认尺寸: {self.config['default_params']['width']}x{self.config['default_params']['height']}"
+            "/sd model list - 列出所有可用模型",
+            "/sd model set [模型索引] - 设置当前模型（根据索引选择）",
         ]
         yield event.plain_result("\n".join(help_msg))
+
+    @sd.group("model")
+    def model(self):
+        pass
+
+    @model.command("list")
+    async def list_model(self, event: AstrMessageEvent):
+        """
+        以“1. xxx.safetensors“形式打印可用的模型
+        """
+        try:
+            models = await self._get_model_list()  # 使用统一方法获取模型列表
+            if not models:
+                yield event.plain_result("⚠️ 没有可用的模型")
+                return
+
+            model_list = "\n".join(f"{i + 1}. {m['model_name']}" for i, m in enumerate(models))
+            yield event.plain_result(f"🖼️ 可用模型列表:\n{model_list}")
+
+        except Exception as e:
+            logger.error(f"获取模型列表失败: {e}")
+            yield event.plain_result("❌ 获取模型列表失败，请检查 WebUI 是否运行")
+
+    @model.command("set")
+    async def set_model(self, event: AstrMessageEvent, model_index: str):
+        """
+        首先转为数字，然后设置数字对应模型
+        """
+        try:
+            models = await self._get_model_list()  # 使用统一方法获取模型列表
+            if not models:
+                yield event.plain_result("⚠️ 没有可用的模型")
+                return
+
+            try:
+                index = int(model_index) - 1
+                if index < 0 or index >= len(models):
+                    yield event.plain_result("❌ 无效的模型索引，请检查 /sd model list")
+                    return
+
+                selected_model = models[index]["model_name"]
+
+                # 发送设置请求
+                async with self.session.post(
+                        f"{self.config['webui_url']}/sdapi/v1/options",
+                        json={"sd_model_checkpoint": selected_model}
+                ) as set_resp:
+                    if set_resp.status == 200:
+                        self.config["default_params"]["sd_model_checkpoint"] = selected_model
+                        yield event.plain_result(f"✅ 模型已切换为: {selected_model}")
+                    else:
+                        yield event.plain_result(f"⚠️ 切换模型失败 (状态码: {set_resp.status})")
+
+            except ValueError:
+                yield event.plain_result("❌ 请输入有效的数字索引")
+
+        except Exception as e:
+            logger.error(f"切换模型失败: {e}")
+            yield event.plain_result("❌ 切换模型失败，请检查 WebUI 是否运行")

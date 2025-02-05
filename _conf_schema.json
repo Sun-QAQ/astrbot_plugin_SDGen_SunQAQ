@@ -15,12 +15,63 @@
         "type": "object",
         "description": "默认生成参数",
         "items": {
-            "width": {"type": "int", "default": 512, "options": [512, 768, 1024]},
-            "height": {"type": "int", "default": 512, "options": [512, 768, 1024]},
-            "steps": {"type": "int", "default": 20, "min": 10, "max": 50},
-            "sampler": {"type": "string", "default": "DPM++ 2M Karras",
-                       "options": ["Euler a", "DPM++ 2M Karras", "DDIM"]},
-            "cfg_scale": {"type": "int", "default": 7, "min": 1, "max": 20}
+            "width": {
+                "type": "int",
+                "default": 512,
+                "options": [
+                    512,
+                    768,
+                    1024
+                ]
+            },
+            "height": {
+                "type": "int",
+                "default": 512,
+                "options": [
+                    512,
+                    768,
+                    1024
+                ]
+            },
+            "steps": {
+                "type": "int",
+                "default": 20,
+                "min": 10,
+                "max": 50
+            },
+            "sampler": {
+                "type": "string",
+                "default": "DPM++ 2M",
+                "options": [
+                    "Euler a",
+                    "Euler",
+                    "Heun",
+                    "DPM2",
+                    "DPM2 a",
+                    "DPM++ 2M",
+                    "DPM++ 2M SDE",
+                    "DPM++ 2M SDE Heun",
+                    "DPM++ 2S a",
+                    "DPM++ 3M SDE",
+                    "DDIM",
+                    "LMS",
+                    "PLMS",
+                    "UniPC"
+                ]
+            },
+            "cfg_scale": {
+                "type": "int",
+                "default": 7,
+                "min": 1,
+                "max": 20
+            }
         }
+    },
+    "sd_model_checkpoint": {
+        "type": "string",
+        "description": "可用图像生成模型",
+        "enum": [],
+        "default": "realisticVisionV5.safetensors",
+        "hint": "可用模型列表将从 WebUI API 获取"
     }
 }
