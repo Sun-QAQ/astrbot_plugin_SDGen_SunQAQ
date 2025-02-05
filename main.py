@@ -252,6 +252,27 @@ class SDGenerator(Star):
             logger.error(f"切换详细模式失败: {e}")
             yield event.plain_result("❌ 切换详细模式失败，请检查配置")
 
+    @sd.command("upscale")
+    async def set_upscale(self, event: AstrMessageEvent):
+        """切换高分辨率处理模式（enable_upscale）"""
+        try:
+            # 获取当前的 upscale 配置值
+            current_upscale = self.config.get("enable_upscale", False)
+
+            # 切换 enable_upscale 配置
+            new_upscale = not current_upscale
+
+            # 更新配置
+            self.config["enable_upscale"] = new_upscale
+
+            # 发送反馈消息
+            status = "开启" if new_upscale else "关闭"
+            yield event.plain_result(f"📢 高分辨率处理模式已{status}")
+
+        except Exception as e:
+            logger.error(f"切换高分辨率放大模式失败: {e}")
+            yield event.plain_result("❌ 切换高分辨率放大模式失败，请检查配置")
+
     @sd.command("conf")
     async def show_conf(self, event: AstrMessageEvent):
         """打印当前图像生成参数，包括当前使用的模型"""

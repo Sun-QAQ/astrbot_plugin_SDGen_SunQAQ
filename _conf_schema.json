@@ -19,7 +19,7 @@
     },
     "enable_upscale": {
         "type": "bool",
-        "description": "启用高分辨率修复和超分辨放大功能",
+        "description": "启用高分辨率处理",
         "default": false,
         "hint": "设置为true时启用"
     },
