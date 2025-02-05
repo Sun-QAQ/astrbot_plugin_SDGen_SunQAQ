@@ -105,8 +105,9 @@ class SDGenerator(Star):
         """统一处理高分辨率修复与超分辨率放大"""
 
         # 获取配置参数
-        upscale_factor = self.config.get("upscale_factor", 2)
-        upscaler = self.config.get("upscaler", "Latent")
+        params = self.config["default_params"]
+        upscale_factor = params["upscale_factor"] or "2"
+        upscaler = params["upscaler"] or "未设置"
 
         # 根据配置构建payload
         payload = {
@@ -235,8 +236,9 @@ class SDGenerator(Star):
 
     def _get_upscale_params(self) -> str:
         """获取当前图像增强（超分辨率放大）参数"""
-        upscale_factor = self.config.get("upscale_factor", 2)  # 默认放大倍数为2
-        upscaler = self.config.get("upscaler", "Latent")  # 默认上采样算法为 Latent
+        params = self.config["default_params"]
+        upscale_factor = params["upscale_factor"] or "2"
+        upscaler = params["upscaler"] or "未设置"
 
         return (
             f"- 放大倍数: {upscale_factor}\n"
