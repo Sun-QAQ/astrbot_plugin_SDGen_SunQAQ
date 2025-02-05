@@ -218,17 +218,44 @@ class SDGenerator(Star):
         return (
             f"当前模型: {model_checkpoint}\n"
             f"图片尺寸: {width}x{height}\n"
-            f"生成步数: {steps}\n"
+            f"步数: {steps}\n"
             f"采样器: {sampler}\n"
             f"CFG比例: {cfg_scale}"
         )
+
+    @sd.command("verbose")
+    async def set_verbose(self, event: AstrMessageEvent):
+        """切换详细模式（verbose）"""
+        try:
+            # 读取当前状态并取反
+            current_verbose = self.config.get("verbose", True)
+            new_verbose = not current_verbose
+
+            # 更新配置
+            self.config["verbose"] = new_verbose
+
+            # 发送反馈消息
+            status = "开启" if new_verbose else "关闭"
+            yield event.plain_result(f"📢 详细模式已{status}")
+        except Exception as e:
+            logger.error(f"切换详细模式失败: {e}")
+            yield event.plain_result("❌ 切换详细模式失败，请检查配置")
 
     @sd.command("conf")
     async def show_conf(self, event: AstrMessageEvent):
         """打印当前图像生成参数，包括当前使用的模型"""
         try:
-            gen_params = self._get_generation_params()  # 获取当前生成参数
-            yield event.plain_result(f"当前图像生成参数:\n{gen_params}")
+            gen_params = self._get_generation_params()  # 获取当前图像参数
+            prompt_guidelines = self.config.get("prompt_guidelines", "未设置")  # 获取提示词限制
+            verbose = self.config.get("verbose", True)  # 获取详略模式
+
+            conf_message = (
+                f"📌 当前图像生成参数:\n{gen_params}\n\n"
+                f"🛠️  提示词附加要求: {prompt_guidelines}\n"
+                f"📢  详细模式: {'开启' if verbose else '关闭'}"
+            )
+
+            yield event.plain_result(conf_message)
         except Exception as e:
             logger.error(f"获取生成参数失败: {e}")
             yield event.plain_result("❌ 获取图像生成参数失败，请检查配置是否正确")

@@ -2,7 +2,7 @@
     "verbose": {
         "type": "bool",
         "description": "控制回复的详略程度",
-        "default": false,
+        "default": true,
         "hint": "设置为true时，将输出生成步骤，否则只输出图片"
     },
     "webui_url": {
@@ -81,8 +81,7 @@
     },
     "prompt_guidelines": {
         "type": "string",
-        "description": "LMM生成提示词时附加限制",
-        "default": "任何被判断为色情的提示词都应该被替换，避免出现色情内容",
-        "hint": "例如屏蔽色情内容等"
+        "description": "LMM生成提示词时的附加限制",
+        "hint": "屏蔽色情内容等, 例如`任何被判断为色情的提示词都应该被替换，避免出现色情内容`"
     }
 }
