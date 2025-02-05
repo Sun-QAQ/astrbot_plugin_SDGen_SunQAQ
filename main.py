@@ -185,17 +185,7 @@ class SDGenerator(Star):
             await self.ensure_session()
             async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/progress") as resp:
                 if resp.status == 200:
-                    # 服务连接正常，获取可用模型列表
-                    model_names = await self._get_model_list()
-
-                    if model_names:
-                        default_model = model_names[0]  # 选择第一个模型
-                        if await self.set_model(default_model):
-                            yield event.plain_result(f"✅ 服务连接正常，已设置默认模型：{default_model}")
-                        else:
-                            yield event.plain_result(f"✅ 服务连接正常，但默认模型设置失败")
-                    else:
-                        yield event.plain_result("⚠️ 服务连接正常，但未获取到可用模型")
+                    yield event.plain_result("✅ 服务连接正常")
                 else:
                     yield event.plain_result(f"⚠️ 服务异常 (状态码: {resp.status})")
         except Exception as e:
