@@ -269,6 +269,7 @@ class SDGenerator(Star):
             "/sd gen [提示词] - 生成图像（示例：/sd gen 星空下的城堡）",
             "/sd check - 检查服务连接状态（首次运行时获取可用模型列表）",
             "/sd conf - 打印图像生成参数",
+            "/sd verbose - 设置详细模式"
             "/sd help - 显示本帮助信息",
             "/sd model list - 列出所有可用模型",
             "/sd model set [模型索引] - 设置当前模型（根据索引选择）",
