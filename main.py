@@ -267,6 +267,7 @@ class SDGenerator(Star):
 
     @model.command("set")
     async def set_model_command(self, event: AstrMessageEvent, model_index: str):
+        logger.debug(f"model_index: {model_index}")
         """
         解析用户输入的索引，并设置对应的模型
         """
@@ -282,7 +283,7 @@ class SDGenerator(Star):
                     yield event.plain_result("❌ 无效的模型索引，请检查 /sd model list")
                     return
 
-                selected_model = models[index]  # 直接取模型名
+                selected_model = models[index]
 
                 if await self.set_model(selected_model):
                     yield event.plain_result(f"✅ 模型已切换为: {selected_model}")
