@@ -251,7 +251,7 @@ class SDGenerator(Star):
 
             conf_message = (
                 f"📌 当前图像生成参数:\n{gen_params}\n\n"
-                f"🛠️  提示词附加要求: {prompt_guidelines}\n"
+                f"🛠️  提示词附加要求: {prompt_guidelines}\n\n"
                 f"📢  详细模式: {'开启' if verbose else '关闭'}"
             )
 
