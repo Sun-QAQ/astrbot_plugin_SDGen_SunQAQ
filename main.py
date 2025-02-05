@@ -115,8 +115,8 @@ class SDGenerator(Star):
             "upscaler_1": upscaler,  # 使用配置的上采样算法
             "resize_mode": 0,  # 标准缩放模式
             "show_extras_results": True,  # 显示额外结果
-            "upscaling_resize_w": 0,  # 自动计算宽度
-            "upscaling_resize_h": 0,  # 自动计算高度
+            "upscaling_resize_w": 1,  # 自动计算宽度
+            "upscaling_resize_h": 1,  # 自动计算高度
             "upscaling_crop": False,  # 不裁剪图像
             "gfpgan_visibility": 0,  # 不使用人脸修复
             "codeformer_visibility": 0,  # 不使用CodeFormer修复
