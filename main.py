@@ -260,7 +260,7 @@ class SDGenerator(Star):
             status = "开启" if new_verbose else "关闭"
             yield event.plain_result(f"📢 详细输出模式已{status}")
         except Exception as e:
-            logger.error(f"切换详细模式失败: {e}")
+            logger.error(f"切换详细输出模式失败: {e}")
             yield event.plain_result("❌ 切换详细模式失败，请检查配置")
 
     @sd.command("upscale")
@@ -317,8 +317,8 @@ class SDGenerator(Star):
             "/sd gen [提示词] - 生成图像（示例：/sd gen 星空下的城堡）",
             "/sd check - 检查服务连接状态（首次运行时获取可用模型列表）",
             "/sd conf - 打印图像生成参数",
-            "/sd verbose - 设置详细模式",
-            "/sd upscale - 设置图像增强",
+            "/sd verbose - 设置详细输出模式",
+            "/sd upscale - 设置图像增强模式",
             "/sd help - 显示本帮助信息",
             "/sd model list - 列出所有可用模型",
             "/sd model set [模型索引] - 设置当前模型（根据索引选择）",
