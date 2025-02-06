@@ -101,7 +101,7 @@ class SDGenerator(Star):
         payload = await self._generate_payload(prompt)
         return await self._call_sd_api("/sdapi/v1/txt2img", payload)
 
-    async def _apply_image_processing(self, image_base64: str) -> str:
+    async def _apply_image_processing(self, image_origin: str) -> str:
         """统一处理高分辨率修复与超分辨率放大"""
 
         # 获取配置参数
@@ -111,7 +111,7 @@ class SDGenerator(Star):
 
         # 根据配置构建payload
         payload = {
-            "image": image_base64,
+            "image": image_origin,
             "upscaling_resize": upscale_factor,  # 使用配置的放大倍数
             "upscaler_1": upscaler,  # 使用配置的上采样算法
             "resize_mode": 0,  # 标准缩放模式
@@ -125,11 +125,9 @@ class SDGenerator(Star):
             "extras_upscaler_2_visibility": 0  # 不使用额外的上采样算法
         }
 
-        if self.config.get("enable_upscale"):
-            resp = await self._call_sd_api("/sdapi/v1/extra-single-image", payload)
-            return resp["image"]
-        else:
-            return image_base64
+        resp = await self._call_sd_api("/sdapi/v1/extra-single-image", payload)
+        return resp["image"]
+
 
     @command_group("sd")
     def sd(self):
@@ -153,18 +151,19 @@ class SDGenerator(Star):
             # 生成图像
             response = await self._call_t2i_api(generated_prompt)
             if not response.get("images"):
-                raise ValueError("API返回数据异常")
+                raise ValueError("API返回数据异常：生成图像失败")
 
             image_data = response["images"][0]
             logger.debug(f"img: {image_data}")
 
             image_bytes = base64.b64decode(image_data)
-            image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            image = base64.b64encode(image_bytes).decode("utf-8")
 
             # 图像处理
-            if verbose:
-                yield event.plain_result("🖼️ 处理图像阶段，即将结束")
-            image = await self._apply_image_processing(image_base64)
+            if self.config.get("enable_upscale"):
+                if verbose:
+                    yield event.plain_result("🖼️ 处理图像阶段，即将结束...")
+                image = await self._apply_image_processing(image)
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_image:
                 temp_image.write(base64.b64decode(image))
@@ -175,11 +174,25 @@ class SDGenerator(Star):
                 yield event.plain_result("✅ 图像生成成功")
 
             os.remove(temp_image_path)
+        except ValueError as e:
+            # 针对API返回异常的处理
+            logger.error(f"API返回数据异常: {e}")
+            yield event.plain_result(f"❌ 图像生成失败: 参数异常，API调用失败")
+
+        except ConnectionError as e:
+            # 网络连接错误处理
+            logger.error(f"网络连接失败: {e}")
+            yield event.plain_result("⚠️ 生成失败! 请检查网络连接和WebUI服务是否运行正常")
+
+        except TimeoutError as e:
+            # 处理超时错误
+            logger.error(f"请求超时: {e}")
+            yield event.plain_result("⚠️ 请求超时，请稍后再试")
+
         except Exception as e:
-            logger.error(f"Generate image failed, error: {e}")
-            if "Cannot connect to host" in str(e):
-                error_msg = "⚠️ 生成失败! 请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
-                yield event.plain_result(error_msg)
+            # 捕获所有其他异常
+            logger.error(f"生成图像时发生其他错误: {e}")
+            yield event.plain_result(f"❌ 图像生成失败: 发生其他错误，请查阅控制台日志")
 
     async def set_model(self, model_name: str) -> bool:
         """设置 SD WebUI 的默认模型，并存入 config"""
