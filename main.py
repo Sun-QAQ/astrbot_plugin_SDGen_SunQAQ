@@ -235,7 +235,7 @@ class SDGenerator(Star):
                     return False, resp.status
         except Exception as e:
             logger.debug(f"❌ 测试连接 Stable diffusion Webui 失败，报错：{e}")
-            return False
+            return False, 0
 
     @sd.command("check")
     async def check(self, event: AstrMessageEvent):
