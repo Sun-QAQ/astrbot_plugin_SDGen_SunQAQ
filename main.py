@@ -243,9 +243,9 @@ class SDGenerator(Star):
         try:
             webui_available, status = await self._check_webui_available()
             if webui_available:
-                yield event.plain_result("✅ 服务连接正常")
+                yield event.plain_result("✅ 同Webui连接正常")
             else:
-                yield event.plain_result(f"⚠️ 服务异常 (状态码: {status})")
+                yield event.plain_result(f"❌ 同Webui无连接，请检查配置和Webui工作状态)")
         except Exception as e:
             logger.error(f"❌ 检查可用性错误，报错{e}")
             yield event.plain_result("❌ 检查可用性错误，请查看控制台输出")
