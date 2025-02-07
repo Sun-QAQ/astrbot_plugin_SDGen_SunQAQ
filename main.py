@@ -2,6 +2,7 @@ import logging
 import tempfile
 
 import aiohttp
+
 from astrbot.api.all import *
 
 logger = logging.getLogger("astrbot")
@@ -407,4 +408,18 @@ class SDGenerator(Star):
         except Exception as e:
             logger.error(f"切换模型失败: {e}")
             yield event.plain_result("❌ 切换模型失败，请检查 WebUI 是否运行")
+
+    @llm_tool("generate_image_call")
+    async def generate_image_call(self, event: AstrMessageEvent, prompt: str):
+        """根据提示词生成图片
+
+        Args:
+            prompt(string): 用于图片生成的提示词或提示语
+        """
+        try:
+            # 调用已经定义的 generate_image 函数
+            self.generate_image(event, prompt)
+        except Exception as e:
+            logger.error(f"调用 generate_image 时出错: {e}")
+            yield event.plain_result("❌ 图像生成失败，请查看控制台日志")
 
