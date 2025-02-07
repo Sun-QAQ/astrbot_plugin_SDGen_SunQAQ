@@ -12,7 +12,6 @@ class SDGenerator(Star):
         super().__init__(context)
         self.config = config
         self.session = None
-        self.webui_available = None
         self._validate_config()
 
     def _validate_config(self):
@@ -142,11 +141,8 @@ class SDGenerator(Star):
         """
         try:
             # 检查webui可用性
-            if self.webui_available is None:
-                self.webui_available = (await self._check_webui_available())[0]
-
-            if not self.webui_available:
-                yield event.plain_result("⚠️ 生成失败! 请检查网络连接和WebUI服务是否运行正常")
+            if not (await self._check_webui_available())[0]:
+                yield event.plain_result("⚠️ 同webui无连接，目前无法生成图片！")
                 return
 
             verbose = self.config["verbose"]
@@ -227,10 +223,8 @@ class SDGenerator(Star):
             await self.ensure_session()
             async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/progress") as resp:
                 if resp.status == 200:
-                    self.webui_available = True
                     return True, 0
                 else:
-                    self.webui_available = False
                     logger.debug(f"⚠️ Stable diffusion Webui 返回值异常，状态码: {resp.status})")
                     return False, resp.status
         except Exception as e:
@@ -245,7 +239,7 @@ class SDGenerator(Star):
             if webui_available:
                 yield event.plain_result("✅ 同Webui连接正常")
             else:
-                yield event.plain_result(f"❌ 同Webui无连接，请检查配置和Webui工作状态)")
+                yield event.plain_result(f"❌ 同Webui无连接，请检查配置和Webui工作状态")
         except Exception as e:
             logger.error(f"❌ 检查可用性错误，报错{e}")
             yield event.plain_result("❌ 检查可用性错误，请查看控制台输出")
