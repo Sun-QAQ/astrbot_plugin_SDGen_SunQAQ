@@ -97,7 +97,7 @@
         "type": "string",
         "description": "图像生成模型",
         "default": "",
-        "hint": "默认为空，可直接填写，也可以自动获取"
+        "hint": "默认为空，使用 `/sd model list` 获取"
     },
     "prompt_guidelines": {
         "type": "string",
