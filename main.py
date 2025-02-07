@@ -22,17 +22,17 @@ class SDGenerator(Star):
         if self.config["webui_url"].endswith("/"):
             self.config["webui_url"] = self.config["webui_url"].rstrip("/")
 
-    async def ensure_session(self):
+    async def ensure_session(self, timeout: int=120):
         """确保会话连接"""
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=120)
+                timeout=aiohttp.ClientTimeout(timeout)
             )
 
     async def _get_model_list(self):
         """直接从 WebUI API 获取可用模型列表"""
         try:
-            await self.ensure_session()
+            await self.ensure_session(30)
             async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/sd-models") as resp:
                 if resp.status == 200:
                     models = await resp.json()
@@ -82,7 +82,7 @@ class SDGenerator(Star):
 
     async def _call_sd_api(self, endpoint: str, payload: dict) -> dict:
         """通用API调用函数"""
-        await self.ensure_session()
+        await self.ensure_session(30)
         try:
             async with self.session.post(
                     f"{self.config['webui_url']}{endpoint}",
@@ -220,7 +220,7 @@ class SDGenerator(Star):
     async def _check_webui_available(self) -> (bool, str):
         """服务状态检查"""
         try:
-            await self.ensure_session()
+            await self.ensure_session(30)
             async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/progress") as resp:
                 if resp.status == 200:
                     return True, 0
