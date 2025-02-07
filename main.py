@@ -418,7 +418,7 @@ class SDGenerator(Star):
         """
         try:
             # 调用已经定义的 generate_image 函数
-            self.generate_image(event, prompt)
+            await self.generate_image(event, prompt)
         except Exception as e:
             logger.error(f"调用 generate_image 时出错: {e}")
             yield event.plain_result("❌ 图像生成失败，请查看控制台日志")
