@@ -26,7 +26,7 @@ class SDGenerator(Star):
         """确保会话连接"""
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=30)
+                timeout=aiohttp.ClientTimeout(total=120)
             )
 
     async def _get_model_list(self):
