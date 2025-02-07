@@ -195,7 +195,7 @@ class SDGenerator(Star):
             yield event.plain_result(f"❌ 图像生成失败: 发生其他错误，请查阅控制台日志")
 
     async def set_model(self, model_name: str) -> bool:
-        """设置 SD WebUI 的默认模型，并存入 config"""
+        """设置图像生成模型，并存入 config"""
         try:
             async with self.session.post(
                     f"{self.config['webui_url']}/sdapi/v1/options",
@@ -206,10 +206,10 @@ class SDGenerator(Star):
                     logger.debug(f"模型已设置为: {model_name}")
                     return True
                 else:
-                    logger.error(f"设置默认模型失败 (状态码: {resp.status})")
+                    logger.error(f"设置模型失败 (状态码: {resp.status})")
                     return False
         except Exception as e:
-            logger.error(f"设置默认模型异常: {e}")
+            logger.error(f"设置模型异常: {e}")
             return False
 
     @sd.command("check")

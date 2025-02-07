@@ -29,6 +29,7 @@
         "items": {
             "width": {
                 "type": "int",
+                "description": "图像宽度",
                 "default": 512,
                 "options": [
                     512,
@@ -38,6 +39,7 @@
             },
             "height": {
                 "type": "int",
+                "description": "图像高度",
                 "default": 512,
                 "options": [
                     512,
@@ -47,12 +49,14 @@
             },
             "steps": {
                 "type": "int",
+                "description": "步数",
                 "default": 20,
                 "min": 10,
                 "max": 50
             },
             "sampler": {
                 "type": "string",
+                "description": "采样器",
                 "default": "DPM++ 2M",
                 "options": [
                     "Euler a", "Euler", "Heun", "DPM2", "DPM2 a",
@@ -62,12 +66,14 @@
             },
             "cfg_scale": {
                 "type": "int",
+                "description": "CFG比例",
                 "default": 7,
                 "min": 1,
                 "max": 20
             },
             "upscaler": {
                 "type": "string",
+                "description": "上采样算法",
                 "default": "ESRGAN_4x",
                 "options": [
                     "Latent", "Latent(antialiased)", "Latent(bicubic)", "Latent(bicubic antialiased)",
