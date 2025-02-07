@@ -12,6 +12,7 @@ class SDGenerator(Star):
         super().__init__(context)
         self.config = config
         self.session = None
+        self.webui_available = None
         self._validate_config()
 
     def _validate_config(self):
@@ -140,6 +141,14 @@ class SDGenerator(Star):
             prompt: 图像描述提示词
         """
         try:
+            # 检查webui可用性
+            if self.webui_available is None:
+                self.webui_available = (await self._check_webui_available())[0]
+
+            if not self.webui_available:
+                yield event.plain_result("⚠️ 生成失败! 请检查网络连接和WebUI服务是否运行正常")
+                return
+
             verbose = self.config["verbose"]
             if verbose:
                 yield event.plain_result("🖌️ 生成图像阶段，这可能需要一段时间...")
@@ -212,20 +221,34 @@ class SDGenerator(Star):
             logger.error(f"设置模型异常: {e}")
             return False
 
-    @sd.command("check")
-    async def check(self, event: AstrMessageEvent):
+    async def _check_webui_available(self) -> (bool, str):
         """服务状态检查"""
         try:
             await self.ensure_session()
             async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/progress") as resp:
                 if resp.status == 200:
-                    yield event.plain_result("✅ 服务连接正常")
+                    self.webui_available = True
+                    return True, 0
                 else:
-                    yield event.plain_result(f"⚠️ 服务异常 (状态码: {resp.status})")
+                    self.webui_available = False
+                    logger.debug(f"⚠️ Stable diffusion Webui 返回值异常，状态码: {resp.status})")
+                    return False, resp.status
         except Exception as e:
-            if "Cannot connect to host" in str(e):
-                test_fail_msg = "❌ 连接测试失败! 请检查：\n1. WebUI服务是否运行\n2. 防火墙设置\n3. 配置地址是否正确"
-                yield event.plain_result(test_fail_msg)
+            logger.debug(f"❌ 测试连接 Stable diffusion Webui 失败，报错：{e}")
+            return False
+
+    @sd.command("check")
+    async def check(self, event: AstrMessageEvent):
+        """服务状态检查"""
+        try:
+            webui_available, status = await self._check_webui_available()
+            if webui_available:
+                yield event.plain_result("✅ 服务连接正常")
+            else:
+                yield event.plain_result(f"⚠️ 服务异常 (状态码: {status})")
+        except Exception as e:
+            logger.error(f"❌ 检查可用性错误，报错{e}")
+            yield event.plain_result("❌ 检查可用性错误，请查看控制台输出")
 
     def _get_generation_params(self) -> str:
         """获取当前图像生成的参数"""
