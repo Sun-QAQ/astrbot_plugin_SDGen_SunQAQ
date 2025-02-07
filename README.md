@@ -6,6 +6,10 @@
 ## 安装
 - 插件商店直接安装
 - 复制 `https://github.com/zouyonghe/astrbot_plugin_SDGen` 导入
+
+## 工作流
+**使用LLM生成提示词 -> 使用WebUI生成图像 -> 图像增强（可选） -> 输出图像**
+
 ## 配置参数说明
 
 ### WebUI API地址
