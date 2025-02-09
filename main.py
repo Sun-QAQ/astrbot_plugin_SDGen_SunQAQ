@@ -7,7 +7,7 @@ from astrbot.api.all import *
 
 logger = logging.getLogger("astrbot")
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.2")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.3")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -57,7 +57,7 @@ class SDGenerator(Star):
                     elif model_type == "lora":
                         model_names = [l["name"] for l in models if "name" in l]
 
-                    logger.info(f"可用{model_type}模型: {model_names}")
+                    logger.debug(f"可用{model_type}模型: {model_names}")
                     return model_names
         except Exception as e:
             logger.error(f"获取 {model_type} 模型列表失败: {e}")
