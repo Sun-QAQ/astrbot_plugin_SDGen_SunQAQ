@@ -426,7 +426,7 @@ class SDGenerator(Star):
                     return
 
                 selected_model = models[index]
-                logger.error(f"selected_model: {selected_model}")
+                logger.debug(f"selected_model: {selected_model}")
                 if await self._set_model(selected_model):
                     yield event.plain_result(f"✅ 模型已切换为: {selected_model}")
                 else:
