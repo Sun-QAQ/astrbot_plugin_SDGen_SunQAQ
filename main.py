@@ -30,7 +30,7 @@ class SDGenerator(Star):
                 timeout=aiohttp.ClientTimeout(timeout)
             )
 
-    async def _get_model_list(self, model_type: str):
+    async def _get_model_list(self, model_type: str) -> list:
         """从 WebUI API 获取可用模型列表"""
         endpoint_map = {
             "sd": "/sdapi/v1/sd-models",
@@ -46,6 +46,7 @@ class SDGenerator(Star):
             async with self.session.get(f"{self.config['webui_url']}{endpoint_map[model_type]}") as resp:
                 if resp.status == 200:
                     models = await resp.json()
+                    logger.error(f"text: {models}")
                     model_names = [m["model_name"] for m in models if "model_name" in m]
                     logger.error(f"可用{model_type}模型: {model_names}")
                     return model_names
