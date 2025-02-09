@@ -414,6 +414,7 @@ class SDGenerator(Star):
         解析用户输入的索引，并设置对应的模型
         """
         try:
+            logger.error(f"model_index: {model_index}")
             models = await self._get_sd_model_list()
             if not models:
                 yield event.plain_result("⚠️ 没有可用的模型")
@@ -437,7 +438,7 @@ class SDGenerator(Star):
 
         except Exception as e:
             logger.error(f"切换模型失败: {e}")
-            yield event.plain_result("❌ 切换模型失败，请检查 WebUI 是否运行")
+            yield event.plain_result("❌ 切换模型失败，请查看控制台输出")
 
     @sd.command("lora")
     async def list_lora(self, event: AstrMessageEvent):
