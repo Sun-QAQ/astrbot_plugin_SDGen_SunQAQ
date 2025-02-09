@@ -428,7 +428,7 @@ class SDGenerator(Star):
                 selected_model = models[index]
                 logger.debug(f"selected_model: {selected_model}")
                 if await self._set_model(selected_model):
-                    self.conf["base_model"] = selected_model
+                    self.config["base_model"] = selected_model
                     yield event.plain_result(f"✅ 模型已切换为: {selected_model}")
                 else:
                     yield event.plain_result("⚠️ 切换模型失败，请检查 WebUI 状态")
