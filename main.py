@@ -179,8 +179,10 @@ class SDGenerator(Star):
 
     def _get_generation_params(self) -> str:
         """获取当前图像生成的参数"""
-        params = self.config.get("default_params", {})
+        positive_prompt_global = self.config.get("positive_prompt_global", "")
+        negative_prompt_global = self.config.get("negative_prompt_global", "")
 
+        params = self.config.get("default_params", {})
         width = params.get("width") or "未设置"
         height = params.get("height") or "未设置"
         steps = params.get("steps") or "未设置"
@@ -190,6 +192,8 @@ class SDGenerator(Star):
         model_checkpoint = self.config.get("sd_model_checkpoint").strip() or "未设置"
 
         return (
+            f"- 全局正面提示词: {positive_prompt_global}\n"
+            f"- 全局负面提示词: {negative_prompt_global}\n"
             f"- 当前模型: {model_checkpoint}\n"
             f"- 图片尺寸: {width}x{height}\n"
             f"- 步数: {steps}\n"
