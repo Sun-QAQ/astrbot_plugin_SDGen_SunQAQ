@@ -47,7 +47,7 @@ class SDGenerator(Star):
                 if resp.status == 200:
                     models = await resp.json()
                     model_names = [m["model_name"] for m in models if "model_name" in m]
-                    logger.debug(f"可用{model_type}模型: {model_names}")
+                    logger.error(f"可用{model_type}模型: {model_names}")
                     return model_names
         except Exception as e:
             logger.error(f"获取 {model_type} 模型列表失败: {e}")
@@ -404,7 +404,7 @@ class SDGenerator(Star):
         解析用户输入的索引，并设置对应的模型
         """
         try:
-            models = await self._get_model_list()
+            models = await self._get_sd_model_list()
             if not models:
                 yield event.plain_result("⚠️ 没有可用的模型")
                 return
