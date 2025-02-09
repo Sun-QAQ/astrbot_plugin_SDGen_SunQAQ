@@ -99,7 +99,7 @@
             }
         }
     },
-    "sd_model_checkpoint": {
+    "base_model": {
         "type": "string",
         "description": "基础模型",
         "default": "",

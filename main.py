@@ -34,8 +34,8 @@ class SDGenerator(Star):
         """从 WebUI API 获取可用模型列表"""
         endpoint_map = {
             "sd": "/sdapi/v1/sd-models",
-            "embedding": "/sdapi/v1/embedding-models",
-            "lora": "/sdapi/v1/lora-models"
+            "embedding": "/sdapi/v1/embeddings",
+            "lora": "/sdapi/v1/loras"
         }
         if model_type not in endpoint_map:
             logger.error(f"无效的模型类型: {model_type}")
@@ -150,10 +150,10 @@ class SDGenerator(Star):
         try:
             async with self.session.post(
                     f"{self.config['webui_url']}/sdapi/v1/options",
-                    json={"sd_model_checkpoint": model_name}
+                    json={"base_model": model_name}
             ) as resp:
                 if resp.status == 200:
-                    self.config["sd_model_checkpoint"] = model_name  # 存入 config
+                    self.config["base_model"] = model_name  # 存入 config
                     logger.debug(f"模型已设置为: {model_name}")
                     return True
                 else:
@@ -189,12 +189,12 @@ class SDGenerator(Star):
         sampler = params.get("sampler") or "未设置"
         cfg_scale = params.get("cfg_scale") or "未设置"
 
-        model_checkpoint = self.config.get("sd_model_checkpoint").strip() or "未设置"
+        base_model = self.config.get("base_model").strip() or "未设置"
 
         return (
             f"- 全局正面提示词: {positive_prompt_global}\n"
             f"- 全局负面提示词: {negative_prompt_global}\n"
-            f"- 当前模型: {model_checkpoint}\n"
+            f"- 基础模型: {base_model}\n"
             f"- 图片尺寸: {width}x{height}\n"
             f"- 步数: {steps}\n"
             f"- 采样器: {sampler}\n"
