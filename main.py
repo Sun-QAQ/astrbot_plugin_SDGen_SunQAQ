@@ -46,9 +46,18 @@ class SDGenerator(Star):
             async with self.session.get(f"{self.config['webui_url']}{endpoint_map[model_type]}") as resp:
                 if resp.status == 200:
                     models = await resp.json()
-                    logger.error(f"text: {models}")
-                    model_names = [m["model_name"] for m in models if "model_name" in m]
-                    logger.error(f"可用{model_type}模型: {model_names}")
+                    logger.debug(
+                        f"Received data for {model_type}: {models}")  # Changed to debug for more detailed output
+
+                    # 解析不同类型模型
+                    if model_type == "sd":
+                        model_names = [m["model_name"] for m in models if "model_name" in m]
+                    elif model_type == "embedding":
+                        model_names = list(models.get('loaded', {}).keys())
+                    elif model_type == "lora":
+                        model_names = [l["name"] for l in models if "name" in l]
+
+                    logger.info(f"可用{model_type}模型: {model_names}")
                     return model_names
         except Exception as e:
             logger.error(f"获取 {model_type} 模型列表失败: {e}")
