@@ -30,22 +30,37 @@ class SDGenerator(Star):
                 timeout=aiohttp.ClientTimeout(timeout)
             )
 
-    async def _get_model_list(self):
-        """直接从 WebUI API 获取可用模型列表"""
+    async def _get_model_list(self, model_type: str):
+        """从 WebUI API 获取可用模型列表"""
+        endpoint_map = {
+            "sd": "/sdapi/v1/sd-models",
+            "embedding": "/sdapi/v1/embedding-models",
+            "lora": "/sdapi/v1/lora-models"
+        }
+        if model_type not in endpoint_map:
+            logger.error(f"无效的模型类型: {model_type}")
+            return []
+
         try:
             await self.ensure_session(30)
-            async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/sd-models") as resp:
+            async with self.session.get(f"{self.config['webui_url']}{endpoint_map[model_type]}") as resp:
                 if resp.status == 200:
                     models = await resp.json()
-                    logger.debug(f"models: {models}")
-                    if isinstance(models, list):
-                        model_names = [m["model_name"] for m in models if "model_name" in m]
-                        logger.debug(f"可用模型: {model_names}")
-                        return model_names  # 直接返回模型列表
+                    model_names = [m["model_name"] for m in models if "model_name" in m]
+                    logger.debug(f"可用{model_type}模型: {model_names}")
+                    return model_names
         except Exception as e:
-            logger.error(f"获取模型列表失败: {e}")
-
+            logger.error(f"获取 {model_type} 模型列表失败: {e}")
         return []
+
+    async def _get_sd_model_list(self):
+        return await self._get_model_list("sd")
+
+    async def _get_embedding_list(self):
+        return await self._get_model_list("embedding")
+
+    async def _get_lora_list(self):
+        return await self._get_model_list("lora")
 
     async def _generate_payload(self, prompt: str) -> dict:
         """构建生成参数"""
@@ -69,7 +84,8 @@ class SDGenerator(Star):
                 "请根据以下描述生成用于 Stable Diffusion WebUI 的提示词，"
                 "请返回一条逗号分隔的 `prompt` 英文字符串，适用于 SD-WebUI，"
                 "其中应包含主体、风格、光照、色彩等方面的描述，"
-                "避免解释性文本，直接返回 `prompt`，不要加任何额外说明。"
+                "避免解释性文本，不需要 “prompt:” 等内容，不需要双引号包裹，"
+                "直接返回 `prompt`，不要加任何额外说明。"
                 f"{prompt_guidelines}\n"
                 "描述："
             )
@@ -129,10 +145,85 @@ class SDGenerator(Star):
         resp = await self._call_sd_api("/sdapi/v1/extra-single-image", payload)
         return resp["image"]
 
+    async def set_model(self, model_name: str) -> bool:
+        """设置图像生成模型，并存入 config"""
+        try:
+            async with self.session.post(
+                    f"{self.config['webui_url']}/sdapi/v1/options",
+                    json={"sd_model_checkpoint": model_name}
+            ) as resp:
+                if resp.status == 200:
+                    self.config["sd_model_checkpoint"] = model_name  # 存入 config
+                    logger.debug(f"模型已设置为: {model_name}")
+                    return True
+                else:
+                    logger.error(f"设置模型失败 (状态码: {resp.status})")
+                    return False
+        except Exception as e:
+            logger.error(f"设置模型异常: {e}")
+            return False
+
+    async def _check_webui_available(self) -> (bool, str):
+        """服务状态检查"""
+        try:
+            await self.ensure_session(30)
+            async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/progress") as resp:
+                if resp.status == 200:
+                    return True, 0
+                else:
+                    logger.debug(f"⚠️ Stable diffusion Webui 返回值异常，状态码: {resp.status})")
+                    return False, resp.status
+        except Exception as e:
+            logger.debug(f"❌ 测试连接 Stable diffusion Webui 失败，报错：{e}")
+            return False, 0
+
+    def _get_generation_params(self) -> str:
+        """获取当前图像生成的参数"""
+        params = self.config.get("default_params", {})
+
+        width = params.get("width") or "未设置"
+        height = params.get("height") or "未设置"
+        steps = params.get("steps") or "未设置"
+        sampler = params.get("sampler") or "未设置"
+        cfg_scale = params.get("cfg_scale") or "未设置"
+
+        model_checkpoint = self.config.get("sd_model_checkpoint").strip() or "未设置"
+
+        return (
+            f"- 当前模型: {model_checkpoint}\n"
+            f"- 图片尺寸: {width}x{height}\n"
+            f"- 步数: {steps}\n"
+            f"- 采样器: {sampler}\n"
+            f"- CFG比例: {cfg_scale}"
+        )
+
+    def _get_upscale_params(self) -> str:
+        """获取当前图像增强（超分辨率放大）参数"""
+        params = self.config["default_params"]
+        upscale_factor = params["upscale_factor"] or "2"
+        upscaler = params["upscaler"] or "未设置"
+
+        return (
+            f"- 放大倍数: {upscale_factor}\n"
+            f"- 上采样算法: {upscaler}"
+        )
 
     @command_group("sd")
     def sd(self):
         pass
+
+    @sd.command("check")
+    async def check(self, event: AstrMessageEvent):
+        """服务状态检查"""
+        try:
+            webui_available, status = await self._check_webui_available()
+            if webui_available:
+                yield event.plain_result("✅ 同Webui连接正常")
+            else:
+                yield event.plain_result(f"❌ 同Webui无连接，请检查配置和Webui工作状态")
+        except Exception as e:
+            logger.error(f"❌ 检查可用性错误，报错{e}")
+            yield event.plain_result("❌ 检查可用性错误，请查看控制台输出")
 
     @sd.command("gen")
     async def generate_image(self, event: AstrMessageEvent, prompt: str):
@@ -155,7 +246,8 @@ class SDGenerator(Star):
             logger.debug(f"LLM generated prompt: {generated_prompt}")
 
             # 生成图像
-            response = await self._call_t2i_api(generated_prompt)
+            positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
+            response = await self._call_t2i_api(positive_prompt)
             if not response.get("images"):
                 raise ValueError("API返回数据异常：生成图像失败")
 
@@ -199,82 +291,6 @@ class SDGenerator(Star):
             # 捕获所有其他异常
             logger.error(f"生成图像时发生其他错误: {e}")
             yield event.plain_result(f"❌ 图像生成失败: 发生其他错误，请查阅控制台日志")
-
-    async def set_model(self, model_name: str) -> bool:
-        """设置图像生成模型，并存入 config"""
-        try:
-            async with self.session.post(
-                    f"{self.config['webui_url']}/sdapi/v1/options",
-                    json={"sd_model_checkpoint": model_name}
-            ) as resp:
-                if resp.status == 200:
-                    self.config["sd_model_checkpoint"] = model_name  # 存入 config
-                    logger.debug(f"模型已设置为: {model_name}")
-                    return True
-                else:
-                    logger.error(f"设置模型失败 (状态码: {resp.status})")
-                    return False
-        except Exception as e:
-            logger.error(f"设置模型异常: {e}")
-            return False
-
-    async def _check_webui_available(self) -> (bool, str):
-        """服务状态检查"""
-        try:
-            await self.ensure_session(30)
-            async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/progress") as resp:
-                if resp.status == 200:
-                    return True, 0
-                else:
-                    logger.debug(f"⚠️ Stable diffusion Webui 返回值异常，状态码: {resp.status})")
-                    return False, resp.status
-        except Exception as e:
-            logger.debug(f"❌ 测试连接 Stable diffusion Webui 失败，报错：{e}")
-            return False, 0
-
-    @sd.command("check")
-    async def check(self, event: AstrMessageEvent):
-        """服务状态检查"""
-        try:
-            webui_available, status = await self._check_webui_available()
-            if webui_available:
-                yield event.plain_result("✅ 同Webui连接正常")
-            else:
-                yield event.plain_result(f"❌ 同Webui无连接，请检查配置和Webui工作状态")
-        except Exception as e:
-            logger.error(f"❌ 检查可用性错误，报错{e}")
-            yield event.plain_result("❌ 检查可用性错误，请查看控制台输出")
-
-    def _get_generation_params(self) -> str:
-        """获取当前图像生成的参数"""
-        params = self.config.get("default_params", {})
-
-        width = params.get("width") or "未设置"
-        height = params.get("height") or "未设置"
-        steps = params.get("steps") or "未设置"
-        sampler = params.get("sampler") or "未设置"
-        cfg_scale = params.get("cfg_scale") or "未设置"
-
-        model_checkpoint = self.config.get("sd_model_checkpoint").strip() or "未设置"
-
-        return (
-            f"- 当前模型: {model_checkpoint}\n"
-            f"- 图片尺寸: {width}x{height}\n"
-            f"- 步数: {steps}\n"
-            f"- 采样器: {sampler}\n"
-            f"- CFG比例: {cfg_scale}"
-        )
-
-    def _get_upscale_params(self) -> str:
-        """获取当前图像增强（超分辨率放大）参数"""
-        params = self.config["default_params"]
-        upscale_factor = params["upscale_factor"] or "2"
-        upscaler = params["upscaler"] or "未设置"
-
-        return (
-            f"- 放大倍数: {upscale_factor}\n"
-            f"- 上采样算法: {upscaler}"
-        )
 
     @sd.command("verbose")
     async def set_verbose(self, event: AstrMessageEvent):
@@ -366,7 +382,7 @@ class SDGenerator(Star):
         以“1. xxx.safetensors“形式打印可用的模型
         """
         try:
-            models = await self._get_model_list()  # 使用统一方法获取模型列表
+            models = await self._get_sd_model_list()  # 使用统一方法获取模型列表
             if not models:
                 yield event.plain_result("⚠️ 没有可用的模型")
                 return
@@ -379,7 +395,7 @@ class SDGenerator(Star):
             yield event.plain_result("❌ 获取模型列表失败，请检查 WebUI 是否运行")
 
     @model.command("set")
-    async def set_model_command(self, event: AstrMessageEvent, model_index: int):
+    async def set_model(self, event: AstrMessageEvent, model_index: int):
         """
         解析用户输入的索引，并设置对应的模型
         """
@@ -408,6 +424,37 @@ class SDGenerator(Star):
         except Exception as e:
             logger.error(f"切换模型失败: {e}")
             yield event.plain_result("❌ 切换模型失败，请检查 WebUI 是否运行")
+
+    @sd.command("lora")
+    async def list_lora(self, event: AstrMessageEvent):
+        """
+        列出可用的 LoRA 模型
+        """
+        try:
+            lora_models = await self._get_lora_list()
+            if not lora_models:
+                yield event.plain_result("没有可用的 LoRA 模型。")
+            else:
+                lora_model_list = "\n".join(f"{i + 1}. {lora}" for i, lora in enumerate(lora_models))
+                yield event.plain_result(f"可用的 LoRA 模型:\n{lora_model_list}")
+        except Exception as e:
+            yield event.plain_result(f"获取 LoRA 模型列表失败: {str(e)}")
+
+    @sd.command("embedding")
+    async def list_embedding(self, event: AstrMessageEvent):
+        """
+        列出可用的 Embedding 模型
+        """
+        try:
+            embedding_models = await self._get_embedding_list()
+            if not embedding_models:
+                yield event.plain_result("没有可用的 Embedding 模型。")
+            else:
+
+                embedding_model_list = "\n".join(f"{i + 1}. {lora}" for i, lora in enumerate(embedding_models))
+                yield event.plain_result(f"可用的 Embedding 模型:\n{embedding_model_list}")
+        except Exception as e:
+            yield event.plain_result(f"获取 Embedding 模型列表失败: {str(e)}")
 
     @llm_tool("generate_image_call")
     async def generate_image_call(self, event: AstrMessageEvent, prompt: str):

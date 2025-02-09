@@ -11,7 +11,13 @@
         "default": "http://127.0.0.1:7860",
         "hint": "需要包含http://或https://前缀"
     },
-    "negative_prompt": {
+    "positive_prompt_global": {
+        "type": "string",
+        "description": "全局正面提示词",
+        "default": "",
+        "hint": "会自动附加到所有生成请求"
+    },
+    "negative_prompt_global": {
         "type": "string",
         "description": "全局负面提示词",
         "default": "(worst quality, low quality:1.4), deformed, bad anatomy",
@@ -95,7 +101,7 @@
     },
     "sd_model_checkpoint": {
         "type": "string",
-        "description": "图像生成模型",
+        "description": "基础模型",
         "default": "",
         "hint": "默认为空，使用 `/sd model list` 获取"
     },
