@@ -155,12 +155,12 @@ class SDGenerator(Star):
         resp = await self._call_sd_api("/sdapi/v1/extra-single-image", payload)
         return resp["image"]
 
-    async def set_model(self, model_name: str) -> bool:
+    async def _set_model(self, model_name: str) -> bool:
         """设置图像生成模型，并存入 config"""
         try:
             async with self.session.post(
                     f"{self.config['webui_url']}/sdapi/v1/options",
-                    json={"base_model": model_name}
+                    json={"sd_model_checkpoint": model_name}
             ) as resp:
                 if resp.status == 200:
                     self.config["base_model"] = model_name  # 存入 config
@@ -409,12 +409,11 @@ class SDGenerator(Star):
             yield event.plain_result("❌ 获取模型列表失败，请检查 WebUI 是否运行")
 
     @model.command("set")
-    async def set_model(self, event: AstrMessageEvent, model_index: int):
+    async def set_base_model(self, event: AstrMessageEvent, model_index: int):
         """
         解析用户输入的索引，并设置对应的模型
         """
         try:
-            logger.error(f"model_index: {model_index}")
             models = await self._get_sd_model_list()
             if not models:
                 yield event.plain_result("⚠️ 没有可用的模型")
@@ -427,8 +426,8 @@ class SDGenerator(Star):
                     return
 
                 selected_model = models[index]
-
-                if await self.set_model(selected_model):
+                logger.error(f"selected_model: {selected_model}")
+                if await self._set_model(selected_model):
                     yield event.plain_result(f"✅ 模型已切换为: {selected_model}")
                 else:
                     yield event.plain_result("⚠️ 切换模型失败，请检查 WebUI 状态")
