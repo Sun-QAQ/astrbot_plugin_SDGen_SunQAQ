@@ -278,11 +278,13 @@ class SDGenerator(Star):
                     yield event.plain_result("🖼️ 处理图像阶段，即将结束...")
                 image = await self._apply_image_processing(image)
 
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_image:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_image:
                 temp_image.write(base64.b64decode(image))
                 temp_image_path = temp_image.name  # 获取临时文件路径
 
             yield event.image_result(temp_image_path)
+
+
             if verbose:
                 yield event.plain_result("✅ 图像生成成功")
 
