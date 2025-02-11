@@ -17,6 +17,7 @@ class SDGenerator(Star):
 
     def _validate_config(self):
         """配置验证"""
+        self.config["webui_url"] = self.config["webui_url"].strip()
         if not self.config["webui_url"].startswith(("http://", "https://")):
             raise ValueError("WebUI地址必须以http://或https://开头")
 
