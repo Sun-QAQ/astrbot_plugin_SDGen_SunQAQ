@@ -491,4 +491,5 @@ class SDGenerator(Star):
             yield event.plain_result("❌ 图像生成失败，请查看控制台日志")
 
         # 函数调用结束终止事件
-        event.stop_event()
+        #event.stop_event()
+        return
