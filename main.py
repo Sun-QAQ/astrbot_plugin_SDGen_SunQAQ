@@ -7,7 +7,7 @@ from astrbot.api.all import *
 
 logger = logging.getLogger("astrbot")
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.3")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.4")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -78,7 +78,7 @@ class SDGenerator(Star):
 
         return {
             "prompt": prompt,
-            "negative_prompt": self.config["negative_prompt"],
+            "negative_prompt": self.config["negative_prompt_global"],
             "width": params["width"],
             "height": params["height"],
             "steps": params["steps"],
