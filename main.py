@@ -284,7 +284,6 @@ class SDGenerator(Star):
 
             yield event.image_result(temp_image_path)
 
-
             if verbose:
                 yield event.plain_result("✅ 图像生成成功")
 
