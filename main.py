@@ -485,8 +485,10 @@ class SDGenerator(Star):
             async for result in self.generate_image(event, prompt):
                 # 根据生成器的每一个结果返回响应
                 yield result
+
         except Exception as e:
             logger.error(f"调用 generate_image 时出错: {e}")
             yield event.plain_result("❌ 图像生成失败，请查看控制台日志")
 
-
+        # 函数调用结束终止事件
+        event.stop_event()
