@@ -85,6 +85,12 @@ class SDGenerator(Star):
             "cfg_scale": params["cfg_scale"],
         }
 
+    def _trans_prompt(self, prompt: str) -> str:
+        """
+        替换提示词中的所有下划线为空格
+        """
+        return prompt.replace("_", " ")
+
     async def _generate_prompt(self, prompt: str) -> str:
         provider = self.context.get_using_provider()
         if provider:
@@ -260,7 +266,7 @@ class SDGenerator(Star):
                 logger.debug(f"LLM generated prompt: {generated_prompt}")
                 positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
             else:
-                positive_prompt = self.config.get("positive_prompt_global", "") + prompt
+                positive_prompt = self.config.get("positive_prompt_global", "") + self._trans_prompt(prompt)
             
             #输出正向提示词
             if self.config.get("enable_show_positive_prompt", False):
@@ -439,7 +445,7 @@ class SDGenerator(Star):
             "- `/sd verbose`：切换详细输出模式（可查看生成步骤）。",
             "- `/sd upscale`：启用或禁用图像增强模式（高分辨率处理）。",
             "- `/sd LLM`：启用或禁用 LLM 自动生成提示词功能。",
-            "- `/sd prompt`：切换显示正向提示词的功能。",
+            "- `/sd prompt`：启用或禁用显示正向提示词的功能。",
             "- `/sd timeout [秒数]`：设置会话访问的超时时间（范围：10 到 300 秒）。",
             "",
             "🖼️ **模型管理**:",
@@ -448,7 +454,9 @@ class SDGenerator(Star):
             "- `/sd lora`：列出当前可用的 LoRA 模型。",
             "- `/sd embedding`：列出所有加载的 Embedding 模型。",
             "",
-            "提示：使用 `/sd model list` 查看模型名称和索引后，再使用 `/sd model set [索引]` 切换模型。",
+            "提示："
+            "- 使用 `/sd model list` 查看模型名称和索引后，再使用 `/sd model set [索引]` 切换模型。",
+            "- 若不自动生成提示词，则必须在提供的提示词中使用 下划线 代替 空格，以避免无法完整解析提示词。",
         ]
         yield event.plain_result("\n".join(help_msg))
 
