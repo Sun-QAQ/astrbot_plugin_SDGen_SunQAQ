@@ -1,4 +1,5 @@
 import logging
+import re
 import tempfile
 
 import aiohttp
@@ -107,7 +108,7 @@ class SDGenerator(Star):
 
             response = await provider.text_chat(f"{prompt_generate_text} {prompt}", session_id=None)
             if response.completion_text:
-                generated_prompt = response.completion_text.strip()
+                generated_prompt = re.sub(r"<think>[\s\S]*</think>", "", response.completion_text).strip()
                 return generated_prompt
 
         return ""
