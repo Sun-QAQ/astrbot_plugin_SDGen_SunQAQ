@@ -454,7 +454,7 @@ class SDGenerator(Star):
             "- `/sd lora`：列出当前可用的 LoRA 模型。",
             "- `/sd embedding`：列出所有加载的 Embedding 模型。",
             "",
-            "提示："
+            "提示：",
             "- 使用 `/sd model list` 查看模型名称和索引后，再使用 `/sd model set [索引]` 切换模型。",
             "- 若不自动生成提示词，则必须在提供的提示词中使用 下划线 代替 空格，以避免无法完整解析提示词。",
         ]
