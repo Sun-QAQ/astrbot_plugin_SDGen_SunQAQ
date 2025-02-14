@@ -7,7 +7,7 @@ from astrbot.api.all import *
 
 logger = logging.getLogger("astrbot")
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.4")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.5")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -24,11 +24,11 @@ class SDGenerator(Star):
         if self.config["webui_url"].endswith("/"):
             self.config["webui_url"] = self.config["webui_url"].rstrip("/")
 
-    async def ensure_session(self, timeout: int=120):
+    async def ensure_session(self):
         """确保会话连接"""
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(timeout)
+                timeout=aiohttp.ClientTimeout(self.config.get("session_timeout_time", 120))
             )
 
     async def _get_model_list(self, model_type: str) -> list:
@@ -43,12 +43,10 @@ class SDGenerator(Star):
             return []
 
         try:
-            await self.ensure_session(30)
+            await self.ensure_session()
             async with self.session.get(f"{self.config['webui_url']}{endpoint_map[model_type]}") as resp:
                 if resp.status == 200:
                     models = await resp.json()
-                    logger.debug(
-                        f"Received data for {model_type}: {models}")  # Changed to debug for more detailed output
 
                     # 解析不同类型模型
                     if model_type == "sd":
@@ -110,7 +108,7 @@ class SDGenerator(Star):
 
     async def _call_sd_api(self, endpoint: str, payload: dict) -> dict:
         """通用API调用函数"""
-        await self.ensure_session(30)
+        await self.ensure_session()
         try:
             async with self.session.post(
                     f"{self.config['webui_url']}{endpoint}",
@@ -177,7 +175,7 @@ class SDGenerator(Star):
     async def _check_webui_available(self) -> (bool, str):
         """服务状态检查"""
         try:
-            await self.ensure_session(30)
+            await self.ensure_session()
             async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/progress") as resp:
                 if resp.status == 200:
                     return True, 0
@@ -257,11 +255,18 @@ class SDGenerator(Star):
                 yield event.plain_result("🖌️ 生成图像阶段，这可能需要一段时间...")
 
             # 生成提示词
-            generated_prompt = await self._generate_prompt(prompt)
-            logger.debug(f"LLM generated prompt: {generated_prompt}")
-
+            if self.config.get("enable_generate_prompt"):
+                generated_prompt = await self._generate_prompt(prompt)
+                logger.debug(f"LLM generated prompt: {generated_prompt}")
+                positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
+            else:
+                positive_prompt = self.config.get("positive_prompt_global", "") + prompt
+            
+            #输出正向提示词
+            if self.config.get("enable_show_positive_prompt", False):
+                yield event.plain_result(f"正向提示词：{positive_prompt}")
+            
             # 生成图像
-            positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
             response = await self._call_t2i_api(positive_prompt)
             if not response.get("images"):
                 raise ValueError("API返回数据异常：生成图像失败")
@@ -347,6 +352,48 @@ class SDGenerator(Star):
             logger.error(f"切换图像增强模式失败: {e}")
             yield event.plain_result("❌ 切换图像增强模式失败，请检查配置")
 
+    @sd.command("LLM")
+    async def set_generate_prompt(self, event: AstrMessageEvent):
+        """切换生成提示词功能"""
+        try:
+            current_setting = self.config.get("enable_generate_prompt", False)
+            new_setting = not current_setting
+            self.config["enable_generate_prompt"] = new_setting
+
+            status = "开启" if new_setting else "关闭"
+            yield event.plain_result(f"📢 提示词生成功能已{status}")
+        except Exception as e:
+            logger.error(f"切换生成提示词功能失败: {e}")
+            yield event.plain_result("❌ 切换生成提示词功能失败，请检查配置")
+
+    @sd.command("prompt")
+    async def set_show_prompt(self, event: AstrMessageEvent):
+        """切换显示正向提示词功能"""
+        try:
+            current_setting = self.config.get("enable_show_positive_prompt", False)
+            new_setting = not current_setting
+            self.config["enable_show_positive_prompt"] = new_setting
+
+            status = "开启" if new_setting else "关闭"
+            yield event.plain_result(f"📢 显示正向提示词功能已{status}")
+        except Exception as e:
+            logger.error(f"切换显示正向提示词功能失败: {e}")
+            yield event.plain_result("❌ 切换显示正向提示词功能失败，请检查配置")
+
+    @sd.command("timeout")
+    async def set_timeout(self, event: AstrMessageEvent, time: int):
+        """设置会话超时时间"""
+        try:
+            if time < 10 or time > 300:
+                yield event.plain_result("⚠️ 超时时间需设置在 10 到 300 秒范围内")
+                return
+
+            self.config["session_timeout_time"] = time
+            yield event.plain_result(f"⏲️ 会话超时时间已设置为 {time} 秒")
+        except Exception as e:
+            logger.error(f"设置会话超时时间失败: {e}")
+            yield event.plain_result("❌ 设置会话超时时间失败，请检查配置")
+
     @sd.command("conf")
     async def show_conf(self, event: AstrMessageEvent):
         """打印当前图像生成参数，包括当前使用的模型"""
@@ -355,15 +402,19 @@ class SDGenerator(Star):
             scale_params = self._get_upscale_params()   # 获取图像增强参数
             prompt_guidelines = self.config.get("prompt_guidelines").strip() or "未设置"  # 获取提示词限制
 
-            verbose = self.config.get("verbose", True)           # 获取详略模式
-            upscale = self.config.get("enable_upscale", False)   # 图像增强模式
+            verbose = self.config.get("verbose", True)  # 获取详略模式
+            upscale = self.config.get("enable_upscale", False)  # 图像增强模式
+            show_positive_prompt = self.config.get("enable_show_positive_prompt", False)  # 是否显示正向提示词
+            generate_prompt = self.config.get("enable_generate_prompt", False)  # 是否启用生成提示词
 
             conf_message = (
                 f"⚙️  图像生成参数:\n{gen_params}\n\n"
                 f"🔍  图像增强参数:\n{scale_params}\n\n"
                 f"🛠️  提示词附加要求: {prompt_guidelines}\n\n"
                 f"📢  详细输出模式: {'开启' if verbose else '关闭'}\n\n"
-                f"🔧  图像增强模式: {'开启' if upscale else '关闭'}"
+                f"🔧  图像增强模式: {'开启' if upscale else '关闭'}\n\n"
+                f"📝  正向提示词显示: {'开启' if show_positive_prompt else '关闭'}\n\n"
+                f"🤖  提示词生成模式: {'开启' if generate_prompt else '关闭'}"
             )
 
             yield event.plain_result(conf_message)
@@ -467,7 +518,6 @@ class SDGenerator(Star):
             if not embedding_models:
                 yield event.plain_result("没有可用的 Embedding 模型。")
             else:
-
                 embedding_model_list = "\n".join(f"{i + 1}. {lora}" for i, lora in enumerate(embedding_models))
                 yield event.plain_result(f"可用的 Embedding 模型:\n{embedding_model_list}")
         except Exception as e:
