@@ -1,12 +1,9 @@
-import logging
 import re
 import tempfile
 
 import aiohttp
 
 from astrbot.api.all import *
-
-logger = logging.getLogger("astrbot")
 
 @register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.5")
 class SDGenerator(Star):
