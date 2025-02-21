@@ -112,8 +112,8 @@ class SDGenerator(Star):
         if provider:
             prompt_guidelines = self.config["prompt_guidelines"]
             prompt_generate_text = (
-                "请根据以下描述生成用于 Stable Diffusion WebUI 的提示词，"
-                "请返回一条逗号分隔的 `prompt` 英文字符串，适用于 SD-WebUI，"
+                "请根据以下描述生成用于 Stable Diffusion WebUI 的英文提示词，"
+                "请返回一条逗号分隔的 `prompt` 英文字符串，适用于 stable-diffusion-webui，"
                 "其中应包含主体、风格、光照、色彩等方面的描述，"
                 "避免解释性文本，不需要 “prompt:” 等内容，不需要双引号包裹，"
                 "直接返回 `prompt`，不要加任何额外说明。"
