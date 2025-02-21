@@ -32,7 +32,7 @@ class SDGenerator(Star):
     async def _fetch_webui_resource(self, resource_type: str) -> list:
         """从 WebUI API 获取指定类型的资源列表"""
         endpoint_map = {
-            "sd": "/sdapi/v1/sd-models",
+            "model": "/sdapi/v1/sd-models",
             "embedding": "/sdapi/v1/embeddings",
             "lora": "/sdapi/v1/loras",
             "sampler": "/sdapi/v1/samplers",
@@ -47,9 +47,10 @@ class SDGenerator(Star):
             async with self.session.get(f"{self.config['webui_url']}{endpoint_map[resource_type]}") as resp:
                 if resp.status == 200:
                     resources = await resp.json()
+                    logger.error(resources)
 
                     # 按不同类型解析返回数据
-                    if resource_type == "sd":
+                    if resource_type == "model":
                         resource_names = [r["model_name"] for r in resources if "model_name" in r]
                     elif resource_type == "embedding":
                         resource_names = list(resources.get('loaded', {}).keys())
@@ -71,7 +72,7 @@ class SDGenerator(Star):
         return []
 
     async def _get_sd_model_list(self):
-        return await self._fetch_webui_resource("sd")
+        return await self._fetch_webui_resource("model")
 
     async def _get_embedding_list(self):
         return await self._fetch_webui_resource("embedding")
