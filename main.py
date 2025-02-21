@@ -56,9 +56,10 @@ class SDGenerator(Star):
                     elif resource_type == "lora":
                         resource_names = [r["name"] for r in resources if "name" in r]
                     elif resource_type == "sampler":
-                        resource_names = [r["name"] for r in resources if "name" in r]
+                        resource_names = [r["name"] for r in resources if isinstance(r, dict) and "name" in r]
                     elif resource_type == "upscaler":
-                        resource_names = [r["name"] for r in resources if "name" in r]
+                        resource_names = [r["name"] for r in resources if isinstance(r, dict) and "name" in r]
+
                     else:
                         resource_names = []
 
@@ -478,7 +479,7 @@ class SDGenerator(Star):
             "ℹ️ **注意事项**:",
             "- 如启用自动生成提示词功能，则会使用 LLM 根据提供的信息随机生成提示词。"
             "- 如未启用自动生成提示词功能，若自定义的提示词包含空格，则应使用 `_` 替代提示词中的空格。",
-            "- 模型、采样器和其他资源的索引需要使用对应 `list` 命令获取后设置！"
+            "- 模型、采样器和其他资源的索引需要使用对应 `list` 命令获取后设置！",
             "- 目前在插件中设置的配置再重启时会丢失，如需保存配置请前往AstrBot面板-插件-配置，保存并重启。"
         ]
         yield event.plain_result("\n".join(help_msg))
