@@ -81,12 +81,8 @@
             "sampler": {
                 "type": "string",
                 "description": "采样器",
-                "default": "DPM++ 2M",
-                "options": [
-                    "Euler a", "Euler", "Heun", "DPM2", "DPM2 a",
-                    "DPM++ 2M", "DPM++ 2M SDE", "DPM++ 2M SDE Heun",
-                    "DPM++ 2S a", "DPM++ 3M SDE", "DDIM", "LMS", "PLMS", "UniPC"
-                ]
+                "default": "",
+                "hint": "默认为空，使用 `/sd sampler list` 获取，使用 `/sd sampler set <index>` 设置"
             },
             "cfg_scale": {
                 "type": "int",
@@ -98,14 +94,8 @@
             "upscaler": {
                 "type": "string",
                 "description": "上采样算法",
-                "default": "ESRGAN_4x",
-                "options": [
-                    "Latent", "Latent(antialiased)", "Latent(bicubic)", "Latent(bicubic antialiased)",
-                    "Latent(nearest)", "Latent(nearest-exact)", "None", "Lanczos", "Nearest", "DAT x2",
-                    "DAT x3", "DAT x4", "ESRGAN_4x", "LDSR", "R-ESRGAN 4x+", "R-ESRGAN 4x+ Anime6B",
-                    "ScuNET", "SCUNET PSNR", "SwinlR_4x"
-                ],
-                "hint": "选择用于图像放大的算法。常见算法如ESRGAN、R-ESRGAN等"
+                "default": "",
+                "hint": "默认为空，使用 `/sd upscaler list` 获取，使用 `/sd upscaler set <index>` 设置"
             },
             "upscale_factor": {
                 "type": "int",
@@ -121,7 +111,7 @@
         "type": "string",
         "description": "基础模型",
         "default": "",
-        "hint": "默认为空，使用 `/sd model list` 获取"
+        "hint": "默认为空，使用 `/sd model list` 获取，使用 `/sd model set <index>` 设置"
     },
     "prompt_guidelines": {
         "type": "string",

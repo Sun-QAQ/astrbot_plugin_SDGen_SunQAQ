@@ -5,7 +5,7 @@ import aiohttp
 
 from astrbot.api.all import *
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.5")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.6")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -29,45 +29,62 @@ class SDGenerator(Star):
                 timeout=aiohttp.ClientTimeout(self.config.get("session_timeout_time", 120))
             )
 
-    async def _get_model_list(self, model_type: str) -> list:
-        """从 WebUI API 获取可用模型列表"""
+    async def _fetch_webui_resource(self, resource_type: str) -> list:
+        """从 WebUI API 获取指定类型的资源列表"""
         endpoint_map = {
             "sd": "/sdapi/v1/sd-models",
             "embedding": "/sdapi/v1/embeddings",
-            "lora": "/sdapi/v1/loras"
+            "lora": "/sdapi/v1/loras",
+            "sampler": "/sdapi/v1/samplers",
+            "upscaler": "/sdapi/v1/upscalers"
         }
-        if model_type not in endpoint_map:
-            logger.error(f"无效的模型类型: {model_type}")
+        if resource_type not in endpoint_map:
+            logger.error(f"无效的资源类型: {resource_type}")
             return []
 
         try:
             await self.ensure_session()
-            async with self.session.get(f"{self.config['webui_url']}{endpoint_map[model_type]}") as resp:
+            async with self.session.get(f"{self.config['webui_url']}{endpoint_map[resource_type]}") as resp:
                 if resp.status == 200:
-                    models = await resp.json()
+                    resources = await resp.json()
 
-                    # 解析不同类型模型
-                    if model_type == "sd":
-                        model_names = [m["model_name"] for m in models if "model_name" in m]
-                    elif model_type == "embedding":
-                        model_names = list(models.get('loaded', {}).keys())
-                    elif model_type == "lora":
-                        model_names = [l["name"] for l in models if "name" in l]
+                    # 按不同类型解析返回数据
+                    if resource_type == "sd":
+                        resource_names = [r["model_name"] for r in resources if "model_name" in r]
+                    elif resource_type == "embedding":
+                        resource_names = list(resources.get('loaded', {}).keys())
+                    elif resource_type == "lora":
+                        resource_names = [r["name"] for r in resources if "name" in r]
+                    elif resource_type == "sampler":
+                        resource_names = [r["name"] for r in resources if "name" in r]
+                    elif resource_type == "upscaler":
+                        resource_names = [r["name"] for r in resources if "name" in r]
+                    else:
+                        resource_names = []
 
-                    logger.debug(f"可用{model_type}模型: {model_names}")
-                    return model_names
+                    logger.debug(f"从 WebUI 获取到的{resource_type}资源: {resource_names}")
+                    return resource_names
         except Exception as e:
-            logger.error(f"获取 {model_type} 模型列表失败: {e}")
+            logger.error(f"获取 {resource_type} 类型资源失败: {e}")
+
         return []
 
     async def _get_sd_model_list(self):
-        return await self._get_model_list("sd")
+        return await self._fetch_webui_resource("sd")
 
     async def _get_embedding_list(self):
-        return await self._get_model_list("embedding")
+        return await self._fetch_webui_resource("embedding")
 
     async def _get_lora_list(self):
-        return await self._get_model_list("lora")
+        return await self._fetch_webui_resource("lora")
+
+    async def _get_sampler_list(self):
+        """获取可用的采样器列表"""
+        return await self._fetch_webui_resource("sampler")
+
+    async def _get_upscaler_list(self):
+        """获取可用的上采样算法列表"""
+        return await self._fetch_webui_resource("upscaler")
 
     async def _generate_payload(self, prompt: str) -> dict:
         """构建生成参数"""
@@ -428,33 +445,41 @@ class SDGenerator(Star):
 
     @sd.command("help")
     async def show_help(self, event: AstrMessageEvent):
-        """显示帮助信息"""
+        """显示SDGenerator插件所有可用指令及其描述"""
         help_msg = [
-            "🖼️ Stable Diffusion 插件使用指南",
-            "该插件用于调用 Stable Diffusion WebUI 的 API 生成图像。以下是所有可用指令的详细说明：",
+            "🖼️ **Stable Diffusion 插件帮助指南**",
+            "该插件用于调用 Stable Diffusion WebUI 的 API 生成图像并管理相关模型资源。",
             "",
-            "📜 **主要指令列表**:",
-            "- `/sd gen [提示词]`：生成图片。例如：`/sd gen 星空下的城堡`。",
-            "- `/sd check`：检查 WebUI 服务的当前连接状态（首次运行时获取可用的模型列表）。",
-            "- `/sd conf`：打印当前的图像生成参数和当前使用的模型。",
-            "- `/sd help`：显示插件帮助信息（即此内容）。",
+            "📜 **主要功能指令列表**:",
+            "- `/sd gen [提示词]`：生成图片，例如 `/sd gen 星空下的城堡`。",
+            "- `/sd check`：检查 WebUI 的连接状态。",
+            "- `/sd conf`：显示当前使用配置，包括模型、参数和提示词设置。",
+            "- `/sd help`：显示本帮助信息。",
             "",
-            "🔧 **高级设置**:",
-            "- `/sd verbose`：切换详细输出模式（可查看生成步骤）。",
-            "- `/sd upscale`：启用或禁用图像增强模式（高分辨率处理）。",
-            "- `/sd LLM`：启用或禁用 LLM 自动生成提示词功能。",
-            "- `/sd prompt`：启用或禁用显示正向提示词的功能。",
-            "- `/sd timeout [秒数]`：设置会话访问的超时时间（范围：10 到 300 秒）。",
+            "🔧 **高级功能管理指令**:",
+            "- `/sd verbose`：切换详细输出模式，用于显示图像生成步骤。",
+            "- `/sd upscale`：切换图像增强模式（用于超分辨率放大或高分修复）。",
+            "- `/sd LLM`：切换是否使用 LLM 自动生成提示词。",
+            "- `/sd prompt`：切换是否在生成过程显示正向提示词。",
+            "- `/sd timeout [秒数]`：设置连接超时时间（范围：10 到 300 秒）。",
             "",
-            "🖼️ **模型管理**:",
-            "- `/sd model list`：列出 WebUI 当前可用的图像生成模型。",
-            "- `/sd model set [模型索引]`：选择并设置指定模型（通过模型索引）。",
-            "- `/sd lora`：列出当前可用的 LoRA 模型。",
-            "- `/sd embedding`：列出所有加载的 Embedding 模型。",
+            "🖼️ **模型与资源管理指令**:",
+            "- `/sd model list`：列出 WebUI 当前可用的模型。",
+            "- `/sd model set [索引]`：根据索引设置模型，索引可通过 `model list` 查询。",
+            "- `/sd lora`：列出所有可用的 LoRA 模型。",
+            "- `/sd embedding`：显示所有已加载的 Embedding 模型。",
             "",
-            "提示：",
-            "- 使用 `/sd model list` 查看模型名称和索引后，再使用 `/sd model set [索引]` 切换模型。",
-            "- 若不自动生成提示词，则必须在提供的提示词中使用 `下划线` 代替 `空格`，以避免无法完整解析提示词。",
+            "🎨 **采样器与上采样设置指令**:",
+            "- `/sd sampler list`：列出支持的采样器。",
+            "- `/sd sampler set [索引]`：根据索引配置采样器，用于调整生成效果。",
+            "- `/sd upscaler list`：列出支持的上采样算法。",
+            "- `/sd upscaler set [索引]`：根据索引设置上采样算法。",
+            "",
+            "ℹ️ **注意事项**:",
+            "- 如启用自动生成提示词功能，则会使用 LLM 根据提供的信息随机生成提示词。"
+            "- 如未启用自动生成提示词功能，若自定义的提示词包含空格，则应使用 `_` 替代提示词中的空格。",
+            "- 模型、采样器和其他资源的索引需要使用对应 `list` 命令获取后设置！"
+            "- 目前在插件中设置的配置再重启时会丢失，如需保存配置请前往AstrBot面板-插件-配置，保存并重启。"
         ]
         yield event.plain_result("\n".join(help_msg))
 
@@ -526,6 +551,97 @@ class SDGenerator(Star):
                 yield event.plain_result(f"可用的 LoRA 模型:\n{lora_model_list}")
         except Exception as e:
             yield event.plain_result(f"获取 LoRA 模型列表失败: {str(e)}")
+
+    @sd.group("sampler")
+    def sampler(self):
+        pass
+
+    @sampler.command("list")
+    async def list_sampler(self, event: AstrMessageEvent):
+        """
+        列出所有可用的采样器
+        """
+        try:
+            samplers = await self._get_sampler_list()
+            if not samplers:
+                yield event.plain_result("⚠️ 没有可用的采样器")
+                return
+
+            sampler_list = "\n".join(f"{i + 1}. {s['name']}" for i, s in enumerate(samplers))
+            yield event.plain_result(f"🖌️ 可用采样器列表:\n{sampler_list}")
+        except Exception as e:
+            yield event.plain_result(f"获取采样器列表失败: {str(e)}")
+
+    @sampler.command("set")
+    async def set_sampler(self, event: AstrMessageEvent, sampler_index: int):
+        """
+        设置采样器
+        """
+        try:
+            samplers = await self._get_sampler_list()
+            if not samplers:
+                yield event.plain_result("⚠️ 没有可用的采样器")
+                return
+
+            try:
+                index = int(sampler_index) - 1
+                if index < 0 or index >= len(samplers):
+                    yield event.plain_result("❌ 无效的采样器索引，请检查 /sd sampler list")
+                    return
+
+                selected_sampler = samplers[index]["name"]
+                self.config["default_params"]["sampler"] = selected_sampler
+                yield event.plain_result(f"✅ 已设置采样器为: {selected_sampler}")
+            except ValueError:
+                yield event.plain_result("❌ 请输入有效的数字索引")
+        except Exception as e:
+            yield event.plain_result(f"设置采样器失败: {str(e)}")
+
+    @sd.group("upscaler")
+    def upscaler(self):
+        pass
+
+    @upscaler.command("list")
+    async def list_upscaler(self, event: AstrMessageEvent):
+        """
+        列出所有可用的上采样算法
+        """
+        try:
+            upscalers = await self._get_upscaler_list()
+            if not upscalers:
+                yield event.plain_result("⚠️ 没有可用的上采样算法")
+                return
+
+            upscaler_list = "\n".join(f"{i + 1}. {u['name']}" for i, u in enumerate(upscalers))
+            yield event.plain_result(f"🖌️ 可用上采样算法列表:\n{upscaler_list}")
+        except Exception as e:
+            yield event.plain_result(f"获取上采样算法列表失败: {str(e)}")
+
+    @upscaler.command("set")
+    async def set_upscaler(self, event: AstrMessageEvent, upscaler_index: int):
+        """
+        设置上采样算法
+        """
+        try:
+            upscalers = await self._get_upscaler_list()
+            if not upscalers:
+                yield event.plain_result("⚠️ 没有可用的上采样算法")
+                return
+
+            try:
+                index = int(upscaler_index) - 1
+                if index < 0 or index >= len(upscalers):
+                    yield event.plain_result("❌ 无效的上采样算法索引，请检查 /sd upscaler list")
+                    return
+
+                selected_upscaler = upscalers[index]["name"]
+                self.config["default_params"]["upscaler"] = selected_upscaler
+                yield event.plain_result(f"✅ 已设置上采样算法为: {selected_upscaler}")
+            except ValueError:
+                yield event.plain_result("❌ 请输入有效的数字索引")
+        except Exception as e:
+            yield event.plain_result(f"设置上采样算法失败: {str(e)}")
+
 
     @sd.command("embedding")
     async def list_embedding(self, event: AstrMessageEvent):
