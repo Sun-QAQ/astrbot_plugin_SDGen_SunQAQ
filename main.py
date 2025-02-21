@@ -47,7 +47,6 @@ class SDGenerator(Star):
             async with self.session.get(f"{self.config['webui_url']}{endpoint_map[resource_type]}") as resp:
                 if resp.status == 200:
                     resources = await resp.json()
-                    logger.error(resources)
 
                     # 按不同类型解析返回数据
                     if resource_type == "model":
