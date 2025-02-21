@@ -13,81 +13,127 @@
 ## 配置参数说明
 
 ### WebUI API地址
+
 - **类型**: `string`
-- **描述**: WebUI API 地址
+- **描述**: WebUI API地址
 - **默认值**: `http://127.0.0.1:7860`
 - **提示**: 需要包含 `http://` 或 `https://` 前缀
 
-### 全局负面提示词
-- **类型**: `string`
-- **描述**: 负面提示词，会自动附加到所有生成请求
-- **默认值**: `(worst quality, low quality:1.4), deformed, bad anatomy`
-- **提示**: 可自行定义，以优化生成效果
+### 控制回复的详略程度
 
-### 详细回复开关
 - **类型**: `bool`
 - **描述**: 控制回复的详略程度
 - **默认值**: `true`
-- **提示**: `true` 时，将输出生成步骤，否则只输出图片
+- **提示**: 设置为 `true` 时，将输出生成步骤，否则只输出图片
+
+### 会话判定超时时间
+
+- **类型**: `int`
+- **描述**: 会话判定超时时间，单位秒（s）
+- **默认值**: `120`
+- **提示**: 默认为两分钟，可根据需要修改
+
+### 启用使用LLM生成正向提示词
+
+- **类型**: `bool`
+- **描述**: 是否启用使用 LLM 自动生成正向提示词
+- **默认值**: `true`
+- **提示**: 设置为 `true` 时启用
 
 ### 启用高分辨率处理
+
 - **类型**: `bool`
 - **描述**: 是否启用高分辨率处理
 - **默认值**: `false`
-- **提示**: `true` 时启用高分辨率处理
+- **提示**: 设置为 `true` 时启用
 
-### 图像尺寸
-- **宽度 (`width`)**:
-  - **类型**: `int`
-  - **默认值**: `512`
-  - **可选值**: `[512, 768, 1024]`
-- **高度 (`height`)**:
-  - **类型**: `int`
-  - **默认值**: `512`
-  - **可选值**: `[512, 768, 1024]`
+### 启用输出正向提示词
 
-### 采样步数 (`steps`)
+- **类型**: `bool`
+- **描述**: 启用输出正向提示词
+- **默认值**: `false`
+- **提示**: 设置为 `true` 时启用
+
+### 全局正面提示词
+
+- **类型**: `string`
+- **描述**: 全局正面提示词，会自动附加到所有生成请求
+- **默认值**: `""`
+
+### 全局负面提示词
+
+- **类型**: `string`
+- **描述**: 全局负面提示词，会自动附加到所有生成请求
+- **默认值**: `(worst quality, low quality:1.4), deformed, bad anatomy`
+
+### 默认生成参数
+
+#### 图像宽度 (`width`)
+
 - **类型**: `int`
+- **默认值**: `512`
+- **可选值**: `[512, 768, 1024]`
+
+#### 图像高度 (`height`)
+
+- **类型**: `int`
+- **默认值**: `512`
+- **可选值**: `[512, 768, 1024]`
+
+#### 采样步数 (`steps`)
+
+- **类型**: `int`
+- **描述**: 采样步数
 - **默认值**: `20`
 - **范围**: `10 - 50`
 
-### 采样方法 (`sampler`)
-- **类型**: `string`
-- **默认值**: `DPM++ 2M`
-- **可选值**: `Euler a`, `Euler`, `Heun`, `DPM2`, `DPM2 a`, `DPM++ 2M`, `DPM++ 2M SDE`, `DPM++ 2M SDE Heun`, `DPM++ 2S a`, `DPM++ 3M SDE`, `DDIM`, `LMS`, `PLMS`, `UniPC`
+#### 采样方法 (`sampler`)
 
-### 提示词权重 (`cfg_scale`)
+- **类型**: `string`
+- **描述**: 图像生成的采样方法
+- **默认值**: `DPM++ 2M`
+- **可选值**: `Euler a`, `Euler`, `Heun`, `DPM2`, `DPM2 a`, `DPM++ 2M`, `DPM++ 2M SDE`, `DPM++ 2M SDE Heun`,
+  `DPM++ 2S a`, `DPM++ 3M SDE`, `DDIM`, `LMS`, `PLMS`, `UniPC`
+
+#### 提示词权重 (`cfg_scale`)
+
 - **类型**: `int`
+- **描述**: CFG比例
 - **默认值**: `7`
 - **范围**: `1 - 20`
-- **提示**:
-  - `1-3`: 图像更随机，可能会偏离提示词描述，但创造性更高。
-  - `10-15`: 图像更严格遵循提示词，但可能导致细节过度锐化或不自然。
-  - **推荐范围**: `7-12`
 
-### 上采样算法 (`upscaler`)
+#### 上采样算法 (`upscaler`)
+
 - **类型**: `string`
+- **描述**: 放大的上采样算法
 - **默认值**: `ESRGAN_4x`
-- **可选值**: `Latent`, `Latent(antialiased)`, `Latent(bicubic)`, `Latent(bicubic antialiased)`, `Latent(nearest)`, `Latent(nearest-exact)`, `None`, `Lanczos`, `Nearest`, `DAT x2`, `DAT x3`, `DAT x4`, `ESRGAN_4x`, `LDSR`, `R-ESRGAN 4x+`, `R-ESRGAN 4x+ Anime6B`, `ScuNET`, `SCUNET PSNR`, `SwinlR_4x`
-- **提示**: 选择用于图像放大的算法，如 ESRGAN、R-ESRGAN 等
+- **可选值**: `Latent`, `Latent(antialiased)`, `Latent(bicubic)`, `Latent(bicubic antialiased)`, `Latent(nearest)`,
+  `Latent(nearest-exact)`, `None`, `Lanczos`, `Nearest`, `DAT x2`, `DAT x3`, `DAT x4`, `ESRGAN_4x`, `LDSR`,
+  `R-ESRGAN 4x+`, `R-ESRGAN 4x+ Anime6B`, `ScuNET`, `SCUNET PSNR`, `SwinlR_4x`
+- **提示**: 常见算法如ESRGAN、R-ESRGAN等
 
-### 图像放大倍数 (`upscale_factor`)
+#### 图像放大倍数 (`upscale_factor`)
+
 - **类型**: `int`
+- **描述**: 图像放大倍数
 - **默认值**: `2`
 - **范围**: `1 - 8`
 - **提示**: 常见值为 `2`, `4` 等
 
-### 图像生成模型
-- **类型**: `string`
-- **描述**: 选择用于生成的图像模型
-- **默认值**: `""`
-- **提示**: 默认为空，使用 `/sd model list` 获取
+### 基础模型
 
-### LMM附加限制
 - **类型**: `string`
-- **描述**: LMM 生成提示词时的附加限制
+- **描述**: 选择生成图像的基础模型
+- **默认值**: `""`
+- **提示**: 默认为空，可通过 `/sd model list` 获取可用模型
+
+### LMM生成提示词的附加限制
+
+- **类型**: `string`
+- **描述**: LMM生成提示词时的附加限制
 - **默认值**: `""`
 - **提示**: 例如 `任何被判断为色情的提示词都应该被替换，避免出现色情内容`
+
 
 ### 关于Stable Diffusion WebUI的部署建议
 1. 克隆仓库
@@ -131,6 +177,3 @@ pip install -r requirements.txt
 QQ： 1259085392
 - 请尽可能自己debug，实在无法解决的问题再寻求帮助
 - 任何代码方面问题，请随时发issues
-
-[帮助文档](https://astrbot.soulter.top/center/docs/%E5%BC%80%E5%8F%91/%E6%8F%92%E4%BB%B6%E5%BC%80%E5%8F%91/
-)
