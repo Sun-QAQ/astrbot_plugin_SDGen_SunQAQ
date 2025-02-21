@@ -57,9 +57,9 @@ class SDGenerator(Star):
                     elif resource_type == "lora":
                         resource_names = [r["name"] for r in resources if "name" in r]
                     elif resource_type == "sampler":
-                        resource_names = [r["name"] for r in resources if isinstance(r, dict) and "name" in r]
+                        resource_names = [r["name"] for r in resources if "name" in r]
                     elif resource_type == "upscaler":
-                        resource_names = [r["name"] for r in resources if isinstance(r, dict) and "name" in r]
+                        resource_names = [r["name"] for r in resources if "name" in r]
 
                     else:
                         resource_names = []
@@ -569,7 +569,7 @@ class SDGenerator(Star):
                 yield event.plain_result("⚠️ 没有可用的采样器")
                 return
 
-            sampler_list = "\n".join(f"{i + 1}. {s['name']}" for i, s in enumerate(samplers))
+            sampler_list = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(samplers))
             yield event.plain_result(f"🖌️ 可用采样器列表:\n{sampler_list}")
         except Exception as e:
             yield event.plain_result(f"获取采样器列表失败: {str(e)}")
@@ -591,7 +591,7 @@ class SDGenerator(Star):
                     yield event.plain_result("❌ 无效的采样器索引，请检查 /sd sampler list")
                     return
 
-                selected_sampler = samplers[index]["name"]
+                selected_sampler = samplers[index]
                 self.config["default_params"]["sampler"] = selected_sampler
                 yield event.plain_result(f"✅ 已设置采样器为: {selected_sampler}")
             except ValueError:
@@ -614,7 +614,7 @@ class SDGenerator(Star):
                 yield event.plain_result("⚠️ 没有可用的上采样算法")
                 return
 
-            upscaler_list = "\n".join(f"{i + 1}. {u['name']}" for i, u in enumerate(upscalers))
+            upscaler_list = "\n".join(f"{i + 1}. {u}" for i, u in enumerate(upscalers))
             yield event.plain_result(f"🖌️ 可用上采样算法列表:\n{upscaler_list}")
         except Exception as e:
             yield event.plain_result(f"获取上采样算法列表失败: {str(e)}")
@@ -636,7 +636,7 @@ class SDGenerator(Star):
                     yield event.plain_result("❌ 无效的上采样算法索引，请检查 /sd upscaler list")
                     return
 
-                selected_upscaler = upscalers[index]["name"]
+                selected_upscaler = upscalers[index]
                 self.config["default_params"]["upscaler"] = selected_upscaler
                 yield event.plain_result(f"✅ 已设置上采样算法为: {selected_upscaler}")
             except ValueError:
