@@ -7,7 +7,7 @@ from astrbot.api.all import *
 
 PLUGIN_CONFIG_PATH = "data/config/astrbot_plugin_sdgen_config.json"
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.6")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.7")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
