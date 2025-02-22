@@ -204,8 +204,9 @@ class SDGenerator(Star):
             ) as resp:
                 if resp.status == 200:
                     self.config["base_model"] = model_name  # 存入 config
-                    logger.debug(f"模型已设置为: {model_name}")
                     self.save_plugin_config()  # 保存配置
+
+                    logger.debug(f"模型已设置为: {model_name}")
                     return True
                 else:
                     logger.error(f"设置模型失败 (状态码: {resp.status})")
