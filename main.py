@@ -688,9 +688,9 @@ class SDGenerator(Star):
         except Exception as e:
             yield event.plain_result(f"获取 Embedding 模型列表失败: {str(e)}")
 
-    @llm_tool("generate_image_call")
-    async def generate_image_call(self, event: AstrMessageEvent, prompt: str):
-        """根据提示词生成图片
+    @llm_tool("generate_image")
+    async def generate_image(self, event: AstrMessageEvent, prompt: str):
+        """根据提示词使用 Stable Diffusion 生成图片，应仅在提示词包含以下关键字时调用此函数：“生成”“绘制”“画”等。此工具不应在搜索图片时被错误调用。
 
         Args:
             prompt(string): 用于图片生成的提示词或提示语
