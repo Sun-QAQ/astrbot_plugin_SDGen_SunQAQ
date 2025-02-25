@@ -690,10 +690,12 @@ class SDGenerator(Star):
 
     @llm_tool("generate_image")
     async def generate_image(self, event: AstrMessageEvent, prompt: str):
-        """根据提示词使用 Stable Diffusion 生成图片，应仅在提示词包含以下关键字时调用此函数：“生成”“绘制”“画”等。此工具不应在搜索图片时被错误调用。
+        """Generate images using Stable Diffusion based on the given prompt.
+        This function should only be called when the prompt contains keywords like "generate," "draw," or "create."
+        It should not be mistakenly used for image searching.
 
         Args:
-            prompt(string): 用于图片生成的提示词或提示语
+            prompt (string): The prompt or description used for generating images.
         """
         try:
             # 使用 async for 遍历异步生成器的返回值
