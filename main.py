@@ -7,7 +7,7 @@ from astrbot.api.all import *
 
 PLUGIN_CONFIG_PATH = "data/config/astrbot_plugin_sdgen_config.json"
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.7")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.8")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -509,6 +509,39 @@ class SDGenerator(Star):
             "- 模型、采样器和其他资源的索引需要使用对应 `list` 命令获取后设置！",
         ]
         yield event.plain_result("\n".join(help_msg))
+
+    @sd.command("image")
+    async def set_resolution(self, event: AstrMessageEvent, height: int, width: int):
+        """设置分辨率"""
+        try:
+            if height not in [512, 768, 1024] or width not in [512, 768, 1024]:
+                yield event.plain_result("⚠️ 分辨率仅支持: 512, 768, 1024")
+                return
+
+            self.config["default_params"]["height"] = height
+            self.config["default_params"]["width"] = width
+            self.save_plugin_config()  # 保存配置
+
+            yield event.plain_result(f"✅ 分辨率已设置为: {width}x{height}")
+        except Exception as e:
+            logger.error(f"设置分辨率失败: {e}")
+            yield event.plain_result("❌ 设置分辨率失败，请检查配置")
+
+    @sd.command("step")
+    async def set_step(self, event: AstrMessageEvent, step: int):
+        """设置步数"""
+        try:
+            if step < 10 or step > 50:
+                yield event.plain_result("⚠️ 步数需设置在 10 到 50 之间")
+                return
+
+            self.config["default_params"]["steps"] = step
+            self.save_plugin_config()  # 保存配置
+
+            yield event.plain_result(f"✅ 步数已设置为: {step}")
+        except Exception as e:
+            logger.error(f"设置步数失败: {e}")
+            yield event.plain_result("❌ 设置步数失败，请检查配置")
 
     @sd.group("model")
     def model(self):
