@@ -490,6 +490,8 @@ class SDGenerator(Star):
             "- `/sd LLM`：切换是否使用 LLM 自动生成提示词。",
             "- `/sd prompt`：切换是否在生成过程显示正向提示词。",
             "- `/sd timeout [秒数]`：设置连接超时时间（范围：10 到 300 秒）。",
+            "- `/sd res [高度] [宽度]`：设置图像生成的分辨率（支持: 512, 768, 1024）。",
+            "- `/sd step [步数]`：设置图像生成的步数（范围：10 到 50 步）。",
             "",
             "🖼️ **模型与资源管理指令**:",
             "- `/sd model list`：列出 WebUI 当前可用的模型。",
@@ -510,7 +512,7 @@ class SDGenerator(Star):
         ]
         yield event.plain_result("\n".join(help_msg))
 
-    @sd.command("image")
+    @sd.command("res")
     async def set_resolution(self, event: AstrMessageEvent, height: int, width: int):
         """设置分辨率"""
         try:
