@@ -5,8 +5,8 @@ import aiohttp
 
 from astrbot.api.all import *
 
-PLUGIN_CONFIG_PATH = "data/config/astrbot_plugin_sdgen_config.json"
-TEMP_PATH = "data/temp"
+PLUGIN_CONFIG_PATH = os.path.abspath("data/config/astrbot_plugin_sdgen_config.json")
+TEMP_PATH = os.path.abspath("data/temp")
 
 @register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.9")
 class SDGenerator(Star):
