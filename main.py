@@ -4,6 +4,7 @@ import tempfile
 import aiohttp
 
 from astrbot.api.all import *
+from astrbot.core.platform.sources.gewechat.gewechat_event import GewechatPlatformEvent
 
 PLUGIN_CONFIG_PATH = "data/config/astrbot_plugin_sdgen_config.json"
 
@@ -330,7 +331,17 @@ class SDGenerator(Star):
                 temp_image.write(base64.b64decode(image))
                 temp_image_path = temp_image.name  # 获取临时文件路径
 
-            yield event.image_result(temp_image_path)
+            if event.get_platform_name() == "aiocqhttp":
+                yield event.image_result(temp_image_path)
+            elif event.get_platform_name() == "gewechat":
+                from astrbot.core.platform.sources.gewechat.gewechat_platform_adapter import GewechatPlatformAdapter
+                assert isinstance(event, GewechatPlatformEvent)
+                client = event.client
+                to_wxid = event.message_obj.raw_message.get('to_wxid', None)
+                if not to_wxid:
+                    await client.post_image(to_wxid, temp_image_path)
+            else:
+                yield event.plain_result("⚠️ 图片发送失败，不受支持的平台")
 
             if verbose:
                 yield event.plain_result("✅ 图像生成成功")
