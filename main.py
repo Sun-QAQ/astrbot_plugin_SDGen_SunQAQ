@@ -4,9 +4,9 @@ import tempfile
 import aiohttp
 
 from astrbot.api.all import *
-from astrbot.core.platform.sources.gewechat.gewechat_event import GewechatPlatformEvent
 
 PLUGIN_CONFIG_PATH = "data/config/astrbot_plugin_sdgen_config.json"
+TEMP_PATH = "data/temp"
 
 @register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.9")
 class SDGenerator(Star):
@@ -15,6 +15,7 @@ class SDGenerator(Star):
         self.config = config
         self.session = None
         self._validate_config()
+        os.makedirs(TEMP_PATH, exist_ok=True)
 
     def _validate_config(self):
         """配置验证"""
@@ -327,21 +328,11 @@ class SDGenerator(Star):
                     yield event.plain_result("🖼️ 处理图像阶段，即将结束...")
                 image = await self._apply_image_processing(image)
 
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_image:
+            with tempfile.NamedTemporaryFile(dir=TEMP_PATH, delete=False, suffix=".png") as temp_image:
                 temp_image.write(base64.b64decode(image))
                 temp_image_path = temp_image.name  # 获取临时文件路径
 
-            if event.get_platform_name() == "aiocqhttp":
-                yield event.image_result(temp_image_path)
-            elif event.get_platform_name() == "gewechat":
-                from astrbot.core.platform.sources.gewechat.gewechat_platform_adapter import GewechatPlatformAdapter
-                assert isinstance(event, GewechatPlatformEvent)
-                client = event.client
-                to_wxid = event.message_obj.raw_message.get('to_wxid', None)
-                if not to_wxid:
-                    await client.post_image(to_wxid, temp_image_path)
-            else:
-                yield event.plain_result("⚠️ 图片发送失败，不受支持的平台")
+            yield event.image_result(temp_image_path)
 
             if verbose:
                 yield event.plain_result("✅ 图像生成成功")
