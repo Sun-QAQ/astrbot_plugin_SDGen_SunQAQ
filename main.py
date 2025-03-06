@@ -8,7 +8,7 @@ from astrbot.core.platform.sources.gewechat.gewechat_event import GewechatPlatfo
 
 PLUGIN_CONFIG_PATH = "data/config/astrbot_plugin_sdgen_config.json"
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.8")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.9")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
@@ -489,13 +489,13 @@ class SDGenerator(Star):
             "🖼️ **Stable Diffusion 插件帮助指南**",
             "该插件用于调用 Stable Diffusion WebUI 的 API 生成图像并管理相关模型资源。",
             "",
-            "📜 **主要功能指令列表**:",
+            "📜 **主要功能指令**:",
             "- `/sd gen [提示词]`：生成图片，例如 `/sd gen 星空下的城堡`。",
             "- `/sd check`：检查 WebUI 的连接状态。",
             "- `/sd conf`：显示当前使用配置，包括模型、参数和提示词设置。",
             "- `/sd help`：显示本帮助信息。",
             "",
-            "🔧 **高级功能管理指令**:",
+            "🔧 **高级功能指令**:",
             "- `/sd verbose`：切换详细输出模式，用于显示图像生成步骤。",
             "- `/sd upscale`：切换图像增强模式（用于超分辨率放大或高分修复）。",
             "- `/sd LLM`：切换是否使用 LLM 自动生成提示词。",
@@ -504,13 +504,13 @@ class SDGenerator(Star):
             "- `/sd res [高度] [宽度]`：设置图像生成的分辨率（支持: 512, 768, 1024）。",
             "- `/sd step [步数]`：设置图像生成的步数（范围：10 到 50 步）。",
             "",
-            "🖼️ **模型与资源管理指令**:",
+            "🖼️ **基本模型与微调模型指令**:",
             "- `/sd model list`：列出 WebUI 当前可用的模型。",
             "- `/sd model set [索引]`：根据索引设置模型，索引可通过 `model list` 查询。",
             "- `/sd lora`：列出所有可用的 LoRA 模型。",
             "- `/sd embedding`：显示所有已加载的 Embedding 模型。",
             "",
-            "🎨 **采样器与上采样设置指令**:",
+            "🎨 **采样器与上采样算法指令**:",
             "- `/sd sampler list`：列出支持的采样器。",
             "- `/sd sampler set [索引]`：根据索引配置采样器，用于调整生成效果。",
             "- `/sd upscaler list`：列出支持的上采样算法。",
