@@ -5,12 +5,11 @@ import aiohttp
 
 from astrbot.api.all import *
 
-PLUGIN_CONFIG_PATH = os.path.abspath("data/config/astrbot_plugin_sdgen_config.json")
 TEMP_PATH = os.path.abspath("data/temp")
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.9")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.10")
 class SDGenerator(Star):
-    def __init__(self, context: Context, config: dict):
+    def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.config = config
         self.session = None
@@ -32,23 +31,6 @@ class SDGenerator(Star):
             self.session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(self.config.get("session_timeout_time", 120))
             )
-
-    def save_plugin_config(self, file_path=PLUGIN_CONFIG_PATH):
-        """
-        保存插件配置到文件
-        Args:
-            file_path: 保存的配置文件路径
-        """
-        if not file_path:
-            logger.error("插件配置文件路径不存在，保存失败。")
-            return
-        try:
-            with open(file_path, "w", encoding="utf-8") as config_file:
-                json.dump(self.config, config_file, indent=2, ensure_ascii=False)
-            logger.info(f"插件配置已保存到文件: {file_path}")
-        except Exception as e:
-            logger.error(f"保存插件配置失败: {e}")
-
 
     async def _fetch_webui_resource(self, resource_type: str) -> list:
         """从 WebUI API 获取指定类型的资源列表"""
@@ -206,7 +188,7 @@ class SDGenerator(Star):
             ) as resp:
                 if resp.status == 200:
                     self.config["base_model"] = model_name  # 存入 config
-                    self.save_plugin_config()  # 保存配置
+                    self.config.save_config()
 
                     logger.debug(f"模型已设置为: {model_name}")
                     return True
@@ -368,7 +350,7 @@ class SDGenerator(Star):
 
             # 更新配置
             self.config["verbose"] = new_verbose
-            self.save_plugin_config()  # 保存配置
+            self.config.save_config()
 
             # 发送反馈消息
             status = "开启" if new_verbose else "关闭"
@@ -389,7 +371,7 @@ class SDGenerator(Star):
 
             # 更新配置
             self.config["enable_upscale"] = new_upscale
-            self.save_plugin_config()  # 保存配置
+            self.config.save_config()
 
             # 发送反馈消息
             status = "开启" if new_upscale else "关闭"
@@ -406,7 +388,7 @@ class SDGenerator(Star):
             current_setting = self.config.get("enable_generate_prompt", False)
             new_setting = not current_setting
             self.config["enable_generate_prompt"] = new_setting
-            self.save_plugin_config()  # 保存配置
+            self.config.save_config()
 
             status = "开启" if new_setting else "关闭"
             yield event.plain_result(f"📢 提示词生成功能已{status}")
@@ -421,7 +403,7 @@ class SDGenerator(Star):
             current_setting = self.config.get("enable_show_positive_prompt", False)
             new_setting = not current_setting
             self.config["enable_show_positive_prompt"] = new_setting
-            self.save_plugin_config()  # 保存配置
+            self.config.save_config()
 
             status = "开启" if new_setting else "关闭"
             yield event.plain_result(f"📢 显示正向提示词功能已{status}")
@@ -438,7 +420,7 @@ class SDGenerator(Star):
                 return
 
             self.config["session_timeout_time"] = time
-            self.save_plugin_config()  # 保存配置
+            self.config.save_config()
 
             yield event.plain_result(f"⏲️ 会话超时时间已设置为 {time} 秒")
         except Exception as e:
@@ -524,7 +506,7 @@ class SDGenerator(Star):
 
             self.config["default_params"]["height"] = height
             self.config["default_params"]["width"] = width
-            self.save_plugin_config()  # 保存配置
+            self.config.save_config()
 
             yield event.plain_result(f"✅ 分辨率已设置为: {width}x{height}")
         except Exception as e:
@@ -540,7 +522,7 @@ class SDGenerator(Star):
                 return
 
             self.config["default_params"]["steps"] = step
-            self.save_plugin_config()  # 保存配置
+            self.config.save_config()
 
             yield event.plain_result(f"✅ 步数已设置为: {step}")
         except Exception as e:
@@ -654,7 +636,7 @@ class SDGenerator(Star):
 
                 selected_sampler = samplers[index]
                 self.config["default_params"]["sampler"] = selected_sampler
-                self.save_plugin_config()  # 保存配置
+                self.config.save_config()
 
                 yield event.plain_result(f"✅ 已设置采样器为: {selected_sampler}")
             except ValueError:
@@ -701,7 +683,7 @@ class SDGenerator(Star):
 
                 selected_upscaler = upscalers[index]
                 self.config["default_params"]["upscaler"] = selected_upscaler
-                self.save_plugin_config()  # 保存配置
+                self.config.save_config()
 
                 yield event.plain_result(f"✅ 已设置上采样算法为: {selected_upscaler}")
             except ValueError:
