@@ -24,6 +24,7 @@ class SDGenerator(Star):
 
         if self.config["webui_url"].endswith("/"):
             self.config["webui_url"] = self.config["webui_url"].rstrip("/")
+            self.config.save_config()
 
     async def ensure_session(self):
         """确保会话连接"""
