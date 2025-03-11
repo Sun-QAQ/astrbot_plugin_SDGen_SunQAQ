@@ -300,7 +300,6 @@ class SDGenerator(Star):
                 raise ValueError("API返回数据异常：生成图像失败")
 
             image_data = response["images"][0]
-            logger.debug(f"img: {image_data}")
 
             image_bytes = base64.b64decode(image_data)
             image = base64.b64encode(image_bytes).decode("utf-8")
