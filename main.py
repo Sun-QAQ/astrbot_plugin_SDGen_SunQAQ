@@ -1,3 +1,4 @@
+import asyncio
 import re
 import tempfile
 
@@ -7,7 +8,7 @@ from astrbot.api.all import *
 
 TEMP_PATH = os.path.abspath("data/temp")
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.0.10")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.1.0")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -15,6 +16,11 @@ class SDGenerator(Star):
         self.session = None
         self._validate_config()
         os.makedirs(TEMP_PATH, exist_ok=True)
+
+        # 初始化并发控制
+        self.active_tasks = 0
+        self.max_concurrent_tasks = config.get("max_concurrent_tasks", 10)  # 设定最大并发数
+        self.task_semaphore = asyncio.Semaphore(self.max_concurrent_tasks)
 
     def _validate_config(self):
         """配置验证"""
@@ -103,6 +109,8 @@ class SDGenerator(Star):
             "steps": params["steps"],
             "sampler_name": params["sampler"],
             "cfg_scale": params["cfg_scale"],
+            "batch_size": params["batch_size"],
+            "n_iter": params["n_iter"],
         }
 
     def _trans_prompt(self, prompt: str) -> str:
@@ -225,6 +233,8 @@ class SDGenerator(Star):
         steps = params.get("steps") or "未设置"
         sampler = params.get("sampler") or "未设置"
         cfg_scale = params.get("cfg_scale") or "未设置"
+        batch_size = params.get("batch_size") or "未设置"
+        n_iter = params.get("n_iter") or "未设置"
 
         base_model = self.config.get("base_model").strip() or "未设置"
 
@@ -235,7 +245,9 @@ class SDGenerator(Star):
             f"- 图片尺寸: {width}x{height}\n"
             f"- 步数: {steps}\n"
             f"- 采样器: {sampler}\n"
-            f"- CFG比例: {cfg_scale}"
+            f"- CFG比例: {cfg_scale}\n"
+            f"- 批数量: {batch_size}\n"
+            f"- 迭代次数: {n_iter}"
         )
 
     def _get_upscale_params(self) -> str:
@@ -264,7 +276,7 @@ class SDGenerator(Star):
                 yield event.plain_result(f"❌ 同Webui无连接，请检查配置和Webui工作状态")
         except Exception as e:
             logger.error(f"❌ 检查可用性错误，报错{e}")
-            yield event.plain_result("❌ 检查可用性错误，请查看控制台输出")
+            yield event.plain_result("❌ 检查可用性错误，请检查日志")
 
     @sd.command("gen")
     async def generate_image(self, event: AstrMessageEvent, prompt: str):
@@ -272,73 +284,94 @@ class SDGenerator(Star):
         Args:
             prompt: 图像描述提示词
         """
-        try:
-            # 检查webui可用性
-            if not (await self._check_webui_available())[0]:
-                yield event.plain_result("⚠️ 同webui无连接，目前无法生成图片！")
-                return
+        async with self.task_semaphore:
+            self.active_tasks += 1
+            try:
+                # 检查webui可用性
+                if not (await self._check_webui_available())[0]:
+                    yield event.plain_result("⚠️ 同webui无连接，目前无法生成图片！")
+                    return
 
-            verbose = self.config["verbose"]
-            if verbose:
-                yield event.plain_result("🖌️ 生成图像阶段，这可能需要一段时间...")
-
-            # 生成提示词
-            if self.config.get("enable_generate_prompt"):
-                generated_prompt = await self._generate_prompt(prompt)
-                logger.debug(f"LLM generated prompt: {generated_prompt}")
-                positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
-            else:
-                positive_prompt = self.config.get("positive_prompt_global", "") + self._trans_prompt(prompt)
-            
-            #输出正向提示词
-            if self.config.get("enable_show_positive_prompt", False):
-                yield event.plain_result(f"正向提示词：{positive_prompt}")
-            
-            # 生成图像
-            response = await self._call_t2i_api(positive_prompt)
-            if not response.get("images"):
-                raise ValueError("API返回数据异常：生成图像失败")
-
-            image_data = response["images"][0]
-
-            image_bytes = base64.b64decode(image_data)
-            image = base64.b64encode(image_bytes).decode("utf-8")
-
-            # 图像处理
-            if self.config.get("enable_upscale"):
+                verbose = self.config["verbose"]
                 if verbose:
-                    yield event.plain_result("🖼️ 处理图像阶段，即将结束...")
-                image = await self._apply_image_processing(image)
+                    yield event.plain_result("🖌️ 生成图像阶段，这可能需要一段时间...")
 
-            with tempfile.NamedTemporaryFile(dir=TEMP_PATH, delete=False, suffix=".png") as temp_image:
-                temp_image.write(base64.b64decode(image))
-                temp_image_path = temp_image.name  # 获取临时文件路径
+                # 生成提示词
+                if self.config.get("enable_generate_prompt"):
+                    generated_prompt = await self._generate_prompt(prompt)
+                    logger.debug(f"LLM generated prompt: {generated_prompt}")
+                    positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
+                else:
+                    positive_prompt = self.config.get("positive_prompt_global", "") + self._trans_prompt(prompt)
 
-            yield event.image_result(temp_image_path)
+                #输出正向提示词
+                if self.config.get("enable_show_positive_prompt", False):
+                    yield event.plain_result(f"正向提示词：{positive_prompt}")
 
-            if verbose:
-                yield event.plain_result("✅ 图像生成成功")
+                # 生成图像
+                response = await self._call_t2i_api(positive_prompt)
+                if not response.get("images"):
+                    raise ValueError("API返回数据异常：生成图像失败")
 
-            os.remove(temp_image_path)
-        except ValueError as e:
-            # 针对API返回异常的处理
-            logger.error(f"API返回数据异常: {e}")
-            yield event.plain_result(f"❌ 图像生成失败: 参数异常，API调用失败")
+                images = response["images"]
 
-        except ConnectionError as e:
-            # 网络连接错误处理
-            logger.error(f"网络连接失败: {e}")
-            yield event.plain_result("⚠️ 生成失败! 请检查网络连接和WebUI服务是否运行正常")
+                if len(images) == 1:
 
-        except TimeoutError as e:
-            # 处理超时错误
-            logger.error(f"请求超时: {e}")
-            yield event.plain_result("⚠️ 请求超时，请稍后再试")
+                    image_data = response["images"][0]
 
-        except Exception as e:
-            # 捕获所有其他异常
-            logger.error(f"生成图像时发生其他错误: {e}")
-            yield event.plain_result(f"❌ 图像生成失败: 发生其他错误，请查阅控制台日志")
+                    image_bytes = base64.b64decode(image_data)
+                    image = base64.b64encode(image_bytes).decode("utf-8")
+
+                    # 图像处理
+                    if self.config.get("enable_upscale"):
+                        if verbose:
+                            yield event.plain_result("🖼️ 处理图像阶段，即将结束...")
+                        image = await self._apply_image_processing(image)
+
+                    yield event.chain_result([Image.fromBase64(image)])
+                else:
+                    chain = []
+
+                    for image_data in images:
+                        image_bytes = base64.b64decode(image_data)
+                        image = base64.b64encode(image_bytes).decode("utf-8")
+
+                        # 图像处理
+                        if self.config.get("enable_upscale"):
+                            if verbose:
+                                yield event.plain_result("🖼️ 处理图像阶段，即将结束...")
+                            image = await self._apply_image_processing(image)
+
+                        # 添加到链对象
+                        chain.append(Image.fromBase64(image))
+
+                    # 将链式结果发送给事件
+                    yield event.chain_result(chain)
+
+                if verbose:
+                    yield event.plain_result("✅ 图像生成成功")
+
+            except ValueError as e:
+                # 针对API返回异常的处理
+                logger.error(f"API返回数据异常: {e}")
+                yield event.plain_result(f"❌ 图像生成失败: 参数异常，API调用失败")
+
+            except ConnectionError as e:
+                # 网络连接错误处理
+                logger.error(f"网络连接失败: {e}")
+                yield event.plain_result("⚠️ 生成失败! 请检查网络连接和WebUI服务是否运行正常")
+
+            except TimeoutError as e:
+                # 处理超时错误
+                logger.error(f"请求超时: {e}")
+                yield event.plain_result("⚠️ 请求超时，请稍后再试")
+
+            except Exception as e:
+                # 捕获所有其他异常
+                logger.error(f"生成图像时发生其他错误: {e}")
+                yield event.plain_result(f"❌ 图像生成失败: 发生其他错误，请查阅日志")
+            finally:
+                self.active_tasks -= 1
 
     @sd.command("verbose")
     async def set_verbose(self, event: AstrMessageEvent):
@@ -357,7 +390,7 @@ class SDGenerator(Star):
             yield event.plain_result(f"📢 详细输出模式已{status}")
         except Exception as e:
             logger.error(f"切换详细输出模式失败: {e}")
-            yield event.plain_result("❌ 切换详细模式失败，请检查配置")
+            yield event.plain_result("❌ 切换详细模式失败，请检查日志")
 
     @sd.command("upscale")
     async def set_upscale(self, event: AstrMessageEvent):
@@ -379,7 +412,7 @@ class SDGenerator(Star):
 
         except Exception as e:
             logger.error(f"切换图像增强模式失败: {e}")
-            yield event.plain_result("❌ 切换图像增强模式失败，请检查配置")
+            yield event.plain_result("❌ 切换图像增强模式失败，请检查日志")
 
     @sd.command("LLM")
     async def set_generate_prompt(self, event: AstrMessageEvent):
@@ -394,7 +427,7 @@ class SDGenerator(Star):
             yield event.plain_result(f"📢 提示词生成功能已{status}")
         except Exception as e:
             logger.error(f"切换生成提示词功能失败: {e}")
-            yield event.plain_result("❌ 切换生成提示词功能失败，请检查配置")
+            yield event.plain_result("❌ 切换生成提示词功能失败，请检查日志")
 
     @sd.command("prompt")
     async def set_show_prompt(self, event: AstrMessageEvent):
@@ -409,7 +442,7 @@ class SDGenerator(Star):
             yield event.plain_result(f"📢 显示正向提示词功能已{status}")
         except Exception as e:
             logger.error(f"切换显示正向提示词功能失败: {e}")
-            yield event.plain_result("❌ 切换显示正向提示词功能失败，请检查配置")
+            yield event.plain_result("❌ 切换显示正向提示词功能失败，请检查日志")
 
     @sd.command("timeout")
     async def set_timeout(self, event: AstrMessageEvent, time: int):
@@ -425,7 +458,7 @@ class SDGenerator(Star):
             yield event.plain_result(f"⏲️ 会话超时时间已设置为 {time} 秒")
         except Exception as e:
             logger.error(f"设置会话超时时间失败: {e}")
-            yield event.plain_result("❌ 设置会话超时时间失败，请检查配置")
+            yield event.plain_result("❌ 设置会话超时时间失败，请检查日志")
 
     @sd.command("conf")
     async def show_conf(self, event: AstrMessageEvent):
@@ -476,6 +509,8 @@ class SDGenerator(Star):
             "- `/sd timeout [秒数]`：设置连接超时时间（范围：10 到 300 秒）。",
             "- `/sd res [高度] [宽度]`：设置图像生成的分辨率（支持: 512, 768, 1024）。",
             "- `/sd step [步数]`：设置图像生成的步数（范围：10 到 50 步）。",
+            "- `/sd batch [数量]`：设置生成图像的批数量（范围： 1 到 10 张）。"
+            "- `/sd iter [次数]`：设置迭代次数（范围： 1 到 5 次）。"
             "",
             "🖼️ **基本模型与微调模型指令**:",
             "- `/sd model list`：列出 WebUI 当前可用的模型。",
@@ -511,7 +546,7 @@ class SDGenerator(Star):
             yield event.plain_result(f"✅ 分辨率已设置为: {width}x{height}")
         except Exception as e:
             logger.error(f"设置分辨率失败: {e}")
-            yield event.plain_result("❌ 设置分辨率失败，请检查配置")
+            yield event.plain_result("❌ 设置分辨率失败，请检查日志")
 
     @sd.command("step")
     async def set_step(self, event: AstrMessageEvent, step: int):
@@ -527,7 +562,39 @@ class SDGenerator(Star):
             yield event.plain_result(f"✅ 步数已设置为: {step}")
         except Exception as e:
             logger.error(f"设置步数失败: {e}")
-            yield event.plain_result("❌ 设置步数失败，请检查配置")
+            yield event.plain_result("❌ 设置步数失败，请检查日志")
+
+    @sd.command("batch")
+    async def set_batch_size(self, event: AstrMessageEvent, batch_size: int):
+        """设置批量生成的图片数量"""
+        try:
+            if batch_size < 1 or batch_size > 10:
+                yield event.plain_result("⚠️ 图片生成的批数量需设置在 1 到 10 之间")
+                return
+
+            self.config["default_params"]["batch_size"] = batch_size
+            self.config.save_config()
+
+            yield event.plain_result(f"✅ 图片生成批数量已设置为: {batch_size}")
+        except Exception as e:
+            logger.error(f"设置批量生成数量失败: {e}")
+            yield event.plain_result("❌ 设置图片生成批数量失败，请检查日志")
+
+    @sd.command("iter")
+    async def set_n_iter(self, event: AstrMessageEvent, n_iter: int):
+        """设置生成迭代次数"""
+        try:
+            if n_iter < 1 or n_iter > 5:
+                yield event.plain_result("⚠️ 图片生成的迭代次数需设置在 1 到 5 之间")
+                return
+
+            self.config["default_params"]["n_iter"] = n_iter
+            self.config.save_config()
+
+            yield event.plain_result(f"✅ 图片生成的迭代次数已设置为: {n_iter}")
+        except Exception as e:
+            logger.error(f"设置生成迭代次数失败: {e}")
+            yield event.plain_result("❌ 设置图片生成的迭代次数失败，请检查日志")
 
     @sd.group("model")
     def model(self):
@@ -565,7 +632,7 @@ class SDGenerator(Star):
             try:
                 index = int(model_index) - 1  # 转换为 0-based 索引
                 if index < 0 or index >= len(models):
-                    yield event.plain_result("❌ 无效的模型索引，请检查 /sd model list")
+                    yield event.plain_result("❌ 无效的模型索引，请使用 /sd model list 获取")
                     return
 
                 selected_model = models[index]
@@ -580,7 +647,7 @@ class SDGenerator(Star):
 
         except Exception as e:
             logger.error(f"切换模型失败: {e}")
-            yield event.plain_result("❌ 切换模型失败，请查看控制台输出")
+            yield event.plain_result("❌ 切换模型失败，请检查日志")
 
     @sd.command("lora")
     async def list_lora(self, event: AstrMessageEvent):
@@ -631,7 +698,7 @@ class SDGenerator(Star):
             try:
                 index = int(sampler_index) - 1
                 if index < 0 or index >= len(samplers):
-                    yield event.plain_result("❌ 无效的采样器索引，请检查 /sd sampler list")
+                    yield event.plain_result("❌ 无效的采样器索引，请使用 /sd sampler list 获取")
                     return
 
                 selected_sampler = samplers[index]
@@ -724,4 +791,4 @@ class SDGenerator(Star):
 
         except Exception as e:
             logger.error(f"调用 generate_image 时出错: {e}")
-            yield event.plain_result("❌ 图像生成失败，请查看控制台日志")
+            yield event.plain_result("❌ 图像生成失败，请检查日志")

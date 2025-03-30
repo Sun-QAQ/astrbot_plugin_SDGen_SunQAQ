@@ -17,6 +17,12 @@
         "default": 120,
         "hint": "默认为两分钟，根据需要修改"
     },
+    "max_concurrent_tasks": {
+        "type": "int",
+        "description": "最大并发任务数",
+        "default": 10,
+        "hint": "根据显存大小进行设定，防止 OOM"
+    },
     "enable_generate_prompt": {
         "type": "bool",
         "description": "启用使用LLM生成正向提示词",
@@ -104,6 +110,16 @@
                 "min": 1,
                 "max": 8,
                 "hint": "放大倍数，通常为2、4等"
+            },
+            "batch_size": {
+                "type": "int",
+                "description": "每批数量",
+                "default": 1
+            },
+            "n_iter": {
+                "type": "int",
+                "description": "迭代次数",
+                "default": 1
             }
         }
     },
