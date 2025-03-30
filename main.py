@@ -369,7 +369,7 @@ class SDGenerator(Star):
             except Exception as e:
                 # 捕获所有其他异常
                 logger.error(f"生成图像时发生其他错误: {e}")
-                yield event.plain_result(f"❌ 图像生成失败: 发生其他错误，请查阅日志")
+                yield event.plain_result(f"❌ 图像生成失败: 发生其他错误，请检查日志")
             finally:
                 self.active_tasks -= 1
 
