@@ -7,7 +7,7 @@ from astrbot.api.all import *
 
 TEMP_PATH = os.path.abspath("data/temp")
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.1.0")
+@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.1.1")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -331,14 +331,15 @@ class SDGenerator(Star):
                 else:
                     chain = []
 
+                    if self.config.get("enable_upscale") and verbose:
+                        yield event.plain_result("🖼️ 处理图像阶段，即将结束...")
+
                     for image_data in images:
                         image_bytes = base64.b64decode(image_data)
                         image = base64.b64encode(image_bytes).decode("utf-8")
 
                         # 图像处理
                         if self.config.get("enable_upscale"):
-                            if verbose:
-                                yield event.plain_result("🖼️ 处理图像阶段，即将结束...")
                             image = await self._apply_image_processing(image)
 
                         # 添加到链对象
