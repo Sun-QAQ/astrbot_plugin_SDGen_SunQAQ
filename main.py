@@ -7,7 +7,7 @@ from astrbot.api.all import *
 
 TEMP_PATH = os.path.abspath("data/temp")
 
-@register("SDGen", "buding", "Stable Diffusion图像生成器", "1.1.1")
+@register("SDGen", "buding(AstrBot)", "Stable Diffusion图像生成器", "1.1.2")
 class SDGenerator(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
