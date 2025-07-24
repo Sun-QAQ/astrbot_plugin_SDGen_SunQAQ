@@ -46,10 +46,10 @@
         "description": "全局正向提示词设置",
         "items":{
             "positive_prompt_global": {
-            "type": "string",
-            "description": "全局正向提示词",
-            "default": "",
-            "hint": "会自动附加到所有AI生图请求的提示词词组中"
+                "type": "string",
+                "description": "全局正向提示词",
+                "default": "",
+                "hint": "会自动附加到所有AI生图请求的提示词词组中"
             },
             "enable_positive_prompt_add_in_head_or_tail": {
                 "type": "bool",
