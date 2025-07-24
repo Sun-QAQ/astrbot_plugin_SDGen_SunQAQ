@@ -306,13 +306,14 @@ class SDGenerator(Star):
                     generated_prompt = await self._generate_prompt(prompt)
                     logger.debug(f"LLM generated prompt: {generated_prompt}")
                     enable_positive_prompt_add_in_head_or_tail = self.config.get("enable_positive_prompt_add_in_head_or_tail",True)
-                    if bool enable_positive_prompt_add_in_head_or_tail == True:
+                    if enable_positive_prompt_add_in_head_or_tail:
                         positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
                     
                     else:
                         positive_prompt = generated_prompt + self.config.get("positive_prompt_global", "")
                 else:
-                    if bool enable_positive_prompt_add_in_head_or_tail == True:
+                    enable_positive_prompt_add_in_head_or_tail = self.config.get("enable_positive_prompt_add_in_head_or_tail",True)
+                    if enable_positive_prompt_add_in_head_or_tail:
                         positive_prompt = self.config.get("positive_prompt_global", "") + self._trans_prompt(prompt)
                     else:
                         positive_prompt = self._trans_prompt(prompt) + self.config.get("positive_prompt_global", "")
