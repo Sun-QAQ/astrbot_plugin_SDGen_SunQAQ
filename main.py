@@ -112,25 +112,12 @@ class SDGenerator(Star):
             "batch_size": params["batch_size"],
             "n_iter": params["n_iter"],
         }
-#下段内容使用AI生成
+
     def _trans_prompt(self, prompt: str) -> str:
         """
-        将 prompt 中所有“位于尖括号之外”的下划线替换为空格。
-        支持任意嵌套、残缺尖括号，健壮可靠。
+        将提示词中的“用于替代空格的字符”替换为为空格
         """
-        out = []          # 最终字符流
-        stack = 0         # 尖括号嵌套深度
-        for ch in prompt:
-            if ch == '<':
-                stack += 1
-            elif ch == '>':
-                stack = max(stack - 1, 0)   # 避免畸形括号导致负数
-            # 只有不在任何尖括号内时才替换下划线
-            if ch == '_' and stack == 0:
-                out.append(' ')
-            else:
-                out.append(ch)
-        return ''.join(out)
+        return prompt.replace(["rplace_space"], " ")
     
 
 
