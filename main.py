@@ -549,7 +549,7 @@ class SDGenerator(Star):
         yield event.plain_result("\n".join(help_msg))
 
     @sd.command("res")
-    async def set_resolution(self, event: AstrMessageEvent, height: int, width: int):
+    async def set_resolution(self, event: AstrMessageEvent, width: int,height: int ):
         """设置分辨率"""
         try:
             if not isinstance(height, int) or not isinstance(width, int) or height < 1 or width < 1 or height > 2048 or width > 2048:
