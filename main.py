@@ -5,6 +5,7 @@ import aiohttp
 
 from astrbot.api.all import *
 
+
 TEMP_PATH = os.path.abspath("data/temp")
 
 @register("SDGen", "buding(AstrBot)", "Stable Diffusion图像生成器", "1.1.2")
@@ -111,13 +112,26 @@ class SDGenerator(Star):
             "batch_size": params["batch_size"],
             "n_iter": params["n_iter"],
         }
-
+#下段内容使用AI生成
     def _trans_prompt(self, prompt: str) -> str:
         """
-        替换提示词中的所有下划线为空格，但是形如<lora:AAAA_BBBB_CCCC:0.1>内的下划线不替换
+        将 prompt 中所有“位于尖括号之外”的下划线替换为空格。
+        支持任意嵌套、残缺尖括号，健壮可靠。
         """
-        return re.sub(r'_+(?![^<>]*>)',' ',prompt # 匹配不在尖括号内的下划线
-    )
+        out = []          # 最终字符流
+        stack = 0         # 尖括号嵌套深度
+        for ch in prompt:
+            if ch == '<':
+                stack += 1
+            elif ch == '>':
+                stack = max(stack - 1, 0)   # 避免畸形括号导致负数
+            # 只有不在任何尖括号内时才替换下划线
+            if ch == '_' and stack == 0:
+                out.append(' ')
+            else:
+                out.append(ch)
+        return ''.join(out)
+    
 
 
 
