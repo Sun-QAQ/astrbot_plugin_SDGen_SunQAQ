@@ -131,7 +131,7 @@
         "default": "",
         "hint": "屏蔽色情内容等, 例如`任何被判断为色情的提示词都应该被替换，避免出现色情内容`"
     },
-    "rplace_space": {
+    "replace_space": {
         "type": "string",
         "description": "用于替代提示词中空格的字符",
         "default": "~",
