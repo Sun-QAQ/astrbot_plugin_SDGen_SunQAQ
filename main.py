@@ -301,10 +301,11 @@ class SDGenerator(Star):
                     yield event.plain_result("🖌️ 生成图像阶段，这可能需要一段时间...")
 
                 # 生成提示词
-                enable_positive_prompt_add_in_head_or_tail = self.config.get("enable_positive_prompt_add_in_head_or_tail",True)
+                
                 if self.config.get("enable_generate_prompt"):
                     generated_prompt = await self._generate_prompt(prompt)
                     logger.debug(f"LLM generated prompt: {generated_prompt}")
+                    enable_positive_prompt_add_in_head_or_tail = self.config.get("enable_positive_prompt_add_in_head_or_tail",True)
                     if bool enable_positive_prompt_add_in_head_or_tail == True:
                         positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
                     
