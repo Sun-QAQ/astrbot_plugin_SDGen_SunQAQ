@@ -117,7 +117,8 @@ class SDGenerator(Star):
         """
         将提示词中的“用于替代空格的字符”替换为为空格
         """
-        return prompt.replace(["rplace_space"], " ")
+        replace_space = self.config.get("replace_space","~")
+        return prompt.replace(replace_space, " ")
     
 
 
