@@ -7,7 +7,7 @@
     },
     "verbose": {
         "type": "bool",
-        "description": "控制回复的详略程度段",
+        "description": "控制回复的详略程度",
         "default": true,
         "hint": "设置为true时，将实时输出AI生图进行到了哪个阶段，否则仅输出最终图片"
     },
