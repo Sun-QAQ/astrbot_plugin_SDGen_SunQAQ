@@ -114,9 +114,10 @@ class SDGenerator(Star):
 
     def _trans_prompt(self, prompt: str) -> str:
         """
-        替换提示词中的所有下划线为空格
+        替换提示词中的所有下划线为空格，但是形如<lora:AAAA_BBBB_CCCC:0.1>内的下划线不替换
         """
-        return prompt.replace("_", " ")
+        return re.sub(r"(?<!<lora:[^>]*)\_(?![^>]*>) ", " ", prompt)
+
 
     async def _generate_prompt(self, prompt: str) -> str:
         provider = self.context.get_using_provider()
@@ -507,7 +508,7 @@ class SDGenerator(Star):
             "- `/sd LLM`：切换是否使用 LLM 自动生成提示词。",
             "- `/sd prompt`：切换是否在生成过程显示正向提示词。",
             "- `/sd timeout [秒数]`：设置连接超时时间（范围：10 到 300 秒）。",
-            "- `/sd res [高度] [宽度]`：设置图像生成的分辨率（支持: 512, 768, 1024）。",
+            "- `/sd res [高度] [宽度]`：设置图像生成的分辨率（高度和宽度均支持:1-2048之间的任意整数）。",
             "- `/sd step [步数]`：设置图像生成的步数（范围：10 到 50 步）。",
             "- `/sd batch [数量]`：设置生成图像的批数量（范围： 1 到 10 张）。"
             "- `/sd iter [次数]`：设置迭代次数（范围： 1 到 5 次）。"
@@ -535,15 +536,15 @@ class SDGenerator(Star):
     async def set_resolution(self, event: AstrMessageEvent, height: int, width: int):
         """设置分辨率"""
         try:
-            if height not in [512, 768, 1024] or width not in [512, 768, 1024]:
-                yield event.plain_result("⚠️ 分辨率仅支持: 512, 768, 1024")
+            if not isinstance(height, int) or not isinstance(width, int) or height < 1 or width < 1 or height > 2048 or width > 2048:
+                yield event.plain_result("⚠️ 分辨率仅支持:1-2048之间的任意整数")
                 return
 
             self.config["default_params"]["height"] = height
             self.config["default_params"]["width"] = width
             self.config.save_config()
 
-            yield event.plain_result(f"✅ 分辨率已设置为: {width}x{height}")
+            yield event.plain_result(f"✅ 图像生成的分辨率已设置为: 高度——{height}，宽度——{width}")
         except Exception as e:
             logger.error(f"设置分辨率失败: {e}")
             yield event.plain_result("❌ 设置分辨率失败，请检查日志")

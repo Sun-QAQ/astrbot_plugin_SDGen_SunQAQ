@@ -61,21 +61,17 @@
                 "type": "int",
                 "description": "图像宽度",
                 "default": 512,
-                "options": [
-                    512,
-                    768,
-                    1024
-                ]
+                "min": 1,
+                "max": 2048,
+                "hint": "可填入1-2048"
             },
             "height": {
                 "type": "int",
                 "description": "图像高度",
                 "default": 512,
-                "options": [
-                    512,
-                    768,
-                    1024
-                ]
+                "min": 1,
+                "max": 2048,
+                "hint": "可填入1-2048"
             },
             "steps": {
                 "type": "int",
