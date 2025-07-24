@@ -524,7 +524,7 @@ class SDGenerator(Star):
             "- `/sd LLM`：在使用/sd gen指令时，将内容先发送给LLM，再由LLM来生成正向提示词",
             "- `/sd prompt`：开启时，用户发起AI生图请求后，将发送一条消息，内容为送入到Stable diffusion的正向提示词",
             "- `/sd timeout [秒数]`：设置连接超时时间（建议范围：10 到 300 秒）。",
-            "- `/sd res [高度] [宽度]`：设置图像生成的分辨率（高度和宽度均支持:1-2048之间的任意整数）。",
+            "- `/sd res  [宽度] [高度]`：设置图像生成的分辨率（高度和宽度均支持:1-2048之间的任意整数）。",
             "- `/sd step [步数]`：设置图像生成的步数（范围：10 到 50 步）。",
             "- `/sd batch [数量]`：设置发出AI生图请求后，每轮生成的图片数量（范围： 1 到 10 张）。"
             "- `/sd iter [次数]`：设置迭代次数（范围： 1 到 5 次）。"
@@ -560,7 +560,7 @@ class SDGenerator(Star):
             self.config["default_params"]["width"] = width
             self.config.save_config()
 
-            yield event.plain_result(f"✅ 图像生成的分辨率已设置为: 高度——{height}，宽度——{width}")
+            yield event.plain_result(f"✅ 图像生成的分辨率已设置为: 宽度——{width}，高度——{height}")
         except Exception as e:
             logger.error(f"设置分辨率失败: {e}")
             yield event.plain_result("❌ 设置分辨率失败，请检查日志")
