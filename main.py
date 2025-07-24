@@ -116,7 +116,7 @@ class SDGenerator(Star):
         """
         替换提示词中的所有下划线为空格，但是形如<lora:AAAA_BBBB_CCCC:0.1>内的下划线不替换
         """
-        return re.re.sub(
+        return re.sub(
         r'_+(?![^<>]*>)',  # 匹配不在尖括号内的下划线
         ' ',
         prompt
