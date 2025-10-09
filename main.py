@@ -5,6 +5,7 @@ import aiohttp
 
 from astrbot.api.all import *
 
+
 TEMP_PATH = os.path.abspath("data/temp")
 
 @register("SDGen", "buding(AstrBot)", "Stable Diffusion图像生成器", "1.1.2")
@@ -114,9 +115,13 @@ class SDGenerator(Star):
 
     def _trans_prompt(self, prompt: str) -> str:
         """
-        替换提示词中的所有下划线为空格
+        将提示词中的“用于替代空格的字符”替换为为空格
         """
-        return prompt.replace("_", " ")
+        replace_space = self.config.get("replace_space")
+        return prompt.replace(replace_space, " ")
+    
+
+
 
     async def _generate_prompt(self, prompt: str) -> str:
         provider = self.context.get_using_provider()
@@ -296,12 +301,23 @@ class SDGenerator(Star):
                     yield event.plain_result("🖌️ 生成图像阶段，这可能需要一段时间...")
 
                 # 生成提示词
+                
                 if self.config.get("enable_generate_prompt"):
                     generated_prompt = await self._generate_prompt(prompt)
                     logger.debug(f"LLM generated prompt: {generated_prompt}")
-                    positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
+                    enable_positive_prompt_add_in_head_or_tail = self.config.get("enable_positive_prompt_add_in_head_or_tail",True)
+                    if enable_positive_prompt_add_in_head_or_tail:
+                        positive_prompt = self.config.get("positive_prompt_global", "") + generated_prompt
+                    
+                    else:
+                        positive_prompt = generated_prompt + self.config.get("positive_prompt_global", "")
                 else:
-                    positive_prompt = self.config.get("positive_prompt_global", "") + self._trans_prompt(prompt)
+                    enable_positive_prompt_add_in_head_or_tail = self.config.get("enable_positive_prompt_add_in_head_or_tail",True)
+                    if enable_positive_prompt_add_in_head_or_tail:
+                        positive_prompt = self.config.get("positive_prompt_global", "") + self._trans_prompt(prompt)
+                    else:
+                        positive_prompt = self._trans_prompt(prompt) + self.config.get("positive_prompt_global", "")
+                    
 
                 #输出正向提示词
                 if self.config.get("enable_show_positive_prompt", False):
@@ -502,19 +518,19 @@ class SDGenerator(Star):
             "- `/sd help`：显示本帮助信息。",
             "",
             "🔧 **高级功能指令**:",
-            "- `/sd verbose`：切换详细输出模式，用于显示图像生成步骤。",
+            "- `/sd verbose`：切换详细输出模式，用于实时告知目前AI生图进行到了哪个阶段。",
             "- `/sd upscale`：切换图像增强模式（用于超分辨率放大或高分修复）。",
-            "- `/sd LLM`：切换是否使用 LLM 自动生成提示词。",
-            "- `/sd prompt`：切换是否在生成过程显示正向提示词。",
-            "- `/sd timeout [秒数]`：设置连接超时时间（范围：10 到 300 秒）。",
-            "- `/sd res [高度] [宽度]`：设置图像生成的分辨率（支持: 512, 768, 1024）。",
+            "- `/sd LLM`：在使用/sd gen指令时，将内容先发送给LLM，再由LLM来生成正向提示词",
+            "- `/sd prompt`：开启时，用户发起AI生图请求后，将发送一条消息，内容为送入到Stable diffusion的正向提示词",
+            "- `/sd timeout [秒数]`：设置连接超时时间（建议范围：10 到 300 秒）。",
+            "- `/sd res  [宽度] [高度]`：设置图像生成的分辨率（高度和宽度均支持:1-2048之间的任意整数）。",
             "- `/sd step [步数]`：设置图像生成的步数（范围：10 到 50 步）。",
-            "- `/sd batch [数量]`：设置生成图像的批数量（范围： 1 到 10 张）。"
+            "- `/sd batch [数量]`：设置发出AI生图请求后，每轮生成的图片数量（范围： 1 到 10 张）。"
             "- `/sd iter [次数]`：设置迭代次数（范围： 1 到 5 次）。"
             "",
             "🖼️ **基本模型与微调模型指令**:",
             "- `/sd model list`：列出 WebUI 当前可用的模型。",
-            "- `/sd model set [索引]`：根据索引设置模型，索引可通过 `model list` 查询。",
+            "- `/sd model set [索引]`：利用索引设置模型，索引可通过 `model list` 查询。",
             "- `/sd lora`：列出所有可用的 LoRA 模型。",
             "- `/sd embedding`：显示所有已加载的 Embedding 模型。",
             "",
@@ -525,25 +541,25 @@ class SDGenerator(Star):
             "- `/sd upscaler set [索引]`：根据索引设置上采样算法。",
             "",
             "ℹ️ **注意事项**:",
-            "- 如启用自动生成提示词功能，则会使用 LLM 根据提供的信息随机生成提示词。",
-            "- 如未启用自动生成提示词功能，若自定义的提示词包含空格，则应使用 `_` 替代提示词中的空格。",
+            "- 如启用自动生成提示词功能，则会使用 LLM 利用提供的内容来生成提示词。",
+            "- 如未启用自动生成提示词功能，若提供的自定义提示词中包含空格，则应使用 “~”（英文波浪号） 替代所有提示词中的空格，否则输入的自定义提示词组将在空格处中断。你可以在配置中修改想使用的字符。",
             "- 模型、采样器和其他资源的索引需要使用对应 `list` 命令获取后设置！",
         ]
         yield event.plain_result("\n".join(help_msg))
 
     @sd.command("res")
-    async def set_resolution(self, event: AstrMessageEvent, height: int, width: int):
+    async def set_resolution(self, event: AstrMessageEvent, width: int,height: int ):
         """设置分辨率"""
         try:
-            if height not in [512, 768, 1024] or width not in [512, 768, 1024]:
-                yield event.plain_result("⚠️ 分辨率仅支持: 512, 768, 1024")
+            if not isinstance(height, int) or not isinstance(width, int) or height < 1 or width < 1 or height > 2048 or width > 2048:
+                yield event.plain_result("⚠️ 分辨率仅支持:1-2048之间的任意整数")
                 return
 
             self.config["default_params"]["height"] = height
             self.config["default_params"]["width"] = width
             self.config.save_config()
 
-            yield event.plain_result(f"✅ 分辨率已设置为: {width}x{height}")
+            yield event.plain_result(f"✅ 图像生成的分辨率已设置为: 宽度——{width}，高度——{height}")
         except Exception as e:
             logger.error(f"设置分辨率失败: {e}")
             yield event.plain_result("❌ 设置分辨率失败，请检查日志")
