@@ -216,8 +216,8 @@ class SDGenerator(Star):
         """服务状态检查"""
         try:
             await self.ensure_session()
-            async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/progress") as resp:
-                if resp.status == 200:
+            async with self.session.get(f"{self.config['webui_url']}/sdapi/v1/txt2img") as resp:
+                if resp.status == 200 or resp.status == 405:
                     return True, 0
                 else:
                     logger.debug(f"⚠️ Stable diffusion Webui 返回值异常，状态码: {resp.status})")
