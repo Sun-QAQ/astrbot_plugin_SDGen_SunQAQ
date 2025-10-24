@@ -214,7 +214,7 @@ class SDGenerator(Star):
             logger.error(f"设置模型异常: {e}")
             return False
 
-    async def _check_webui_available(self) -> (bool, str):
+    async def _check_webui_available(self) -> tuple[bool, str]:
         """服务状态检查"""
         try:
             await self.ensure_session()
