@@ -133,15 +133,25 @@ class SDWebUIClient:
         return []
 
     def _parse_resource_data(self, resources: dict, resource_type: str) -> list:
-        """解析不同类型的资源数据"""
-        if resource_type == "model":
-            return [r["model_name"] for r in resources if "model_name" in r]
-        elif resource_type == "embedding":
-            return list(resources.get('loaded', {}).keys())
-        elif resource_type in ["lora", "sampler", "upscaler"]:
-            return [r["name"] for r in resources if "name" in r]
+    """解析不同类型的资源数据"""
+    if resource_type == "model":
+        # 只解析基础模型的ID，排除LoRA
+        if isinstance(resources, dict) and "base_models" in resources:
+            return [model.get("id") for model in resources["base_models"] if model.get("id")]
+        # 如果是标准格式（列表）
+        elif isinstance(resources, list):
+            return [r.get("model_name") for r in resources if r.get("model_name")]
         else:
             return []
+    
+    elif resource_type == "embedding":
+        return list(resources.get('loaded', {}).keys())
+    
+    elif resource_type in ["lora", "sampler", "upscaler"]:
+        return [r["name"] for r in resources if "name" in r]
+    
+    else:
+        return []
 
     def _build_generation_payload(self, prompt: str) -> dict:
         """构建图像生成参数"""
