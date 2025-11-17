@@ -44,7 +44,7 @@ class SDGenerator(Star):
         endpoint_map = {
             "model": "/sdapi/v1/sd-models",
             "embedding": "/sdapi/v1/embeddings",
-            "lora": "/sdapi/v1/loras",
+            "lora": "/sdapi/v1/sd-models",
             "sampler": "/sdapi/v1/samplers",
             "upscaler": "/sdapi/v1/upscalers"
         }
@@ -60,7 +60,7 @@ class SDGenerator(Star):
 
                     # 按不同类型解析返回数据
                     if resource_type == "model":
-                        resource_names = [r["model_name"] for r in resources if "model_name" in r]
+                        resource_names = [{"id": r.get("id", r.get("model_name")), "name": r["model_name"]} for r in resources if "model_name" in r]
                     elif resource_type == "embedding":
                         resource_names = list(resources.get('loaded', {}).keys())
                     elif resource_type == "lora":
