@@ -135,6 +135,12 @@
         "default": "",
         "hint": "默认为空，使用 `/sd model list` 获取，使用 `/sd model set <index>` 设置"
     },
+    "lora_model": {
+        "type": "string",
+        "description": "LoRA模型",
+        "default": "",
+        "hint": "默认为空，使用 `/sd loramodel list` 获取，使用 `/sd loramodel set <index>` 设置"
+    },
     "prompt_guidelines": {
         "type": "string",
         "description": "LMM生成提示词时的附加限制",
